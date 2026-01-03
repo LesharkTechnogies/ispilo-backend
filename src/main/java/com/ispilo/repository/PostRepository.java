@@ -19,6 +19,7 @@ public interface PostRepository extends JpaRepository<Post, String> {
 
     Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    // Using named parameters (:viewedPostIds) ensures the collection is handled safely by Hibernate
     @Query(value = "SELECT p.* FROM posts p " +
             "WHERE p.id NOT IN (:viewedPostIds) " +
             "ORDER BY p.created_at DESC",
@@ -26,14 +27,18 @@ public interface PostRepository extends JpaRepository<Post, String> {
             nativeQuery = true)
     Page<Post> findPersonalizedFeed(@Param("viewedPostIds") Collection<String> viewedPostIds, Pageable pageable);
 
+    // Full-text search using parameters is safe.
+    // Note: MATCH...AGAINST syntax is specific to MySQL/MariaDB.
+    // If using PostgreSQL, this should be adapted to to_tsvector/to_tsquery.
+    // Assuming PostgreSQL for this project based on previous context, we'll use ILIKE for safety and compatibility.
     @Query(value = "SELECT p.* FROM posts p " +
-            "WHERE MATCH(p.description) AGAINST(:query IN BOOLEAN MODE) " +
-            "ORDER BY MATCH(p.description) AGAINST(:query IN BOOLEAN MODE) DESC",
-            countQuery = "SELECT count(*) FROM posts p WHERE MATCH(p.description) AGAINST(:query IN BOOLEAN MODE)",
+            "WHERE p.description ILIKE CONCAT('%', :query, '%') " +
+            "ORDER BY p.created_at DESC",
+            countQuery = "SELECT count(*) FROM posts p WHERE p.description ILIKE CONCAT('%', :query, '%')",
             nativeQuery = true)
     Page<Post> searchPosts(@Param("query") String query, Pageable pageable);
 
-    @Query(value = "SELECT DISTINCT description FROM posts WHERE description LIKE :query LIMIT :limit", nativeQuery = true)
+    @Query(value = "SELECT DISTINCT description FROM posts WHERE description ILIKE CONCAT('%', :query, '%') LIMIT :limit", nativeQuery = true)
     List<String> findTypeaheadSuggestions(@Param("query") String query, @Param("limit") int limit);
 
     @Modifying

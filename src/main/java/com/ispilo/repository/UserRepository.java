@@ -22,9 +22,11 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     boolean existsByPhone(String phone);
 
-    @Query("SELECT u FROM User u WHERE u.name LIKE %:query% OR u.email LIKE %:query%")
+    // Using JPQL with named parameters prevents SQL injection
+    @Query("SELECT u FROM User u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
-    @Query(value = "SELECT name FROM users WHERE name LIKE :query LIMIT :limit", nativeQuery = true)
+    // Native query using named parameters is also safe, but we should be careful with LIKE clauses
+    @Query(value = "SELECT name FROM users WHERE LOWER(name) LIKE LOWER(CONCAT('%', :query, '%')) LIMIT :limit", nativeQuery = true)
     List<String> findTypeaheadSuggestions(@Param("query") String query, @Param("limit") int limit);
 }
