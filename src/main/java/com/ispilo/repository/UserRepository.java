@@ -16,7 +16,11 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByPhone(String phone);
+
     boolean existsByEmail(String email);
+
+    boolean existsByPhone(String phone);
 
     @Query("SELECT u FROM User u WHERE u.name LIKE %:query% OR u.email LIKE %:query%")
     Page<User> searchUsers(@Param("query") String query, Pageable pageable);

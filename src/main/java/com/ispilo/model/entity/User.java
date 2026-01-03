@@ -14,6 +14,7 @@ import java.util.List;
 @Entity
 @Table(name = "users", indexes = {
     @Index(name = "idx_email", columnList = "email"),
+    @Index(name = "idx_phone", columnList = "phone"),
     @Index(name = "idx_created_at", columnList = "created_at")
 })
 @Data
@@ -34,11 +35,18 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column(name = "name")
+    private String name; // Kept for backward compatibility or full name display
 
     private String avatar;
 
+    @Column(unique = true, nullable = false)
     private String phone;
 
     @Column(name = "phone_privacy_public")
@@ -48,9 +56,23 @@ public class User {
     @Column(name = "country_code")
     private String countryCode;
 
+    @Column(name = "county")
+    private String county;
+
+    @Column(name = "town")
+    private String town;
+
     @Column(name = "is_verified")
     @Builder.Default
     private Boolean isVerified = false;
+
+    @Column(name = "is_email_verified")
+    @Builder.Default
+    private Boolean isEmailVerified = false;
+
+    @Column(name = "is_phone_verified")
+    @Builder.Default
+    private Boolean isPhoneVerified = false;
 
     @Column(length = 500)
     private String bio;
@@ -73,4 +95,3 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
-

@@ -16,12 +16,18 @@ public class UserResponse {
 
     private String id;
     private String email;
+    private String firstName;
+    private String lastName;
     private String name;
     private String avatar;
     private String phone;
     private Boolean phonePrivacyPublic;
     private String countryCode;
+    private String county;
+    private String town;
     private Boolean isVerified;
+    private Boolean isEmailVerified;
+    private Boolean isPhoneVerified;
     private String bio;
     private String location;
     private LocalDateTime createdAt;
@@ -31,12 +37,18 @@ public class UserResponse {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .name(user.getName())
                 .avatar(user.getAvatar())
                 .phone(user.getPhone())
                 .phonePrivacyPublic(user.getPhonePrivacyPublic())
                 .countryCode(user.getCountryCode())
+                .county(user.getCounty())
+                .town(user.getTown())
                 .isVerified(user.getIsVerified())
+                .isEmailVerified(user.getIsEmailVerified())
+                .isPhoneVerified(user.getIsPhoneVerified())
                 .bio(user.getBio())
                 .location(user.getLocation())
                 .createdAt(user.getCreatedAt())
@@ -44,4 +56,3 @@ public class UserResponse {
                 .build();
     }
 }
-

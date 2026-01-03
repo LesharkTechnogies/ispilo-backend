@@ -22,9 +22,21 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    @NotBlank(message = "Name is required")
-    private String name;
+    @NotBlank(message = "First name is required")
+    private String firstName;
 
+    @NotBlank(message = "Last name is required")
+    private String lastName;
+
+    @NotBlank(message = "Phone number is required")
+    private String phone;
+
+    @NotBlank(message = "Country code is required")
     private String countryCode;
-}
 
+    @NotBlank(message = "County is required")
+    private String county;
+
+    @NotBlank(message = "Town is required")
+    private String town;
+}

@@ -30,15 +30,27 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("User already exists with email: " + request.getEmail());
         }
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new ConflictException("User already exists with phone: " + request.getPhone());
+        }
 
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .name(request.getName())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .name(request.getFirstName() + " " + request.getLastName())
+                .phone(request.getPhone())
                 .countryCode(request.getCountryCode())
+                .county(request.getCounty())
+                .town(request.getTown())
+                .isEmailVerified(false) // Email verification pending
+                .isPhoneVerified(false) // Phone verification pending
                 .build();
 
         userRepository.save(user);
+
+        // TODO: Send verification email and SMS here
 
         String token = jwtUtil.generateToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
@@ -51,12 +63,13 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        // We need to find the user by phone first to get the email (username) for Spring Security
+        User user = userRepository.findByPhone(request.getPhone())
+                .orElseThrow(() -> new NotFoundException("User not found with phone: " + request.getPhone()));
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new NotFoundException("User not found"));
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getEmail(), request.getPassword())
+        );
 
         String token = jwtUtil.generateToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
