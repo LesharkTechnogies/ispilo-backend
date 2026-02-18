@@ -12,6 +12,7 @@ import com.ispilo.model.enums.MessageType;
 import com.ispilo.repository.ConversationRepository;
 import com.ispilo.repository.MessageRepository;
 import com.ispilo.repository.UserRepository;
+import com.ispilo.security.SecurityEncryptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,7 +35,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
-    private final EncryptionService encryptionService;
+    private final SecurityEncryptionService encryptionService;
     private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
@@ -71,11 +72,13 @@ public class MessageService {
         if (request.getContent() != null && !request.getContent().trim().isEmpty()) {
             String conversationKey = conversation.getEncryptionKey();
             if (conversationKey == null) {
-                conversationKey = encryptionService.generateConversationKey();
+                // Generate a new AES key if one doesn't exist for the conversation
+                conversationKey = encryptionService.aesKeyToString(encryptionService.generateAESKey());
                 conversation.setEncryptionKey(conversationKey);
                 conversationRepository.save(conversation);
             }
-            encryptedContent = encryptionService.encrypt(request.getContent(), conversationKey);
+            // Use AES encryption
+            encryptedContent = encryptionService.encryptWithAES(request.getContent(), conversationKey);
         }
 
         // Create message
@@ -131,7 +134,7 @@ public class MessageService {
             MessageResponse response = MessageResponse.fromEntity(message);
             if (message.getContent() != null && conversationKey != null) {
                 try {
-                    response.setContent(encryptionService.decrypt(message.getContent(), conversationKey));
+                    response.setContent(encryptionService.decryptWithAES(message.getContent(), conversationKey));
                 } catch (Exception e) {
                     log.error("Failed to decrypt message {}", message.getId(), e);
                     response.setContent("[Encrypted message]");
@@ -160,6 +163,21 @@ public class MessageService {
         messageRepository.saveAll(unreadMessages);
 
         notifyReadStatus(conversation, userId);
+    }
+
+    @Transactional
+    public void deleteMessage(String userId, String messageId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new NotFoundException("Message not found"));
+
+        if (!message.getSender().getId().equals(userId)) {
+            throw new UnauthorizedException("You can only delete your own messages");
+        }
+
+        messageRepository.delete(message);
+        
+        // Update conversation last message if needed (simplified logic)
+        // In a real app, you'd find the new last message
     }
 
     private void notifyParticipants(Conversation conversation, MessageResponse message, String senderId) {

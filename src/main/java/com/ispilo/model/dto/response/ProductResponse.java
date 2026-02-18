@@ -18,13 +18,20 @@ public class ProductResponse {
 
     private String id;
     private String sellerId;
-    private String name;
+    private String title;
+    private String name; // Kept for backward compatibility
     private String description;
     private BigDecimal price;
     private Integer stockQuantity;
+    private String mainImage;
     private List<String> images;
     private String category;
+    private String condition;
+    private String location;
+    private Double rating;
+    private Integer reviewCount;
     private Boolean isAvailable;
+    private Boolean isFeatured;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -32,13 +39,20 @@ public class ProductResponse {
         return ProductResponse.builder()
                 .id(product.getId())
                 .sellerId(product.getSeller().getId())
+                .title(product.getTitle())
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .stockQuantity(product.getStockQuantity())
+                .mainImage(product.getMainImage())
                 .images(product.getImages())
                 .category(product.getCategory())
+                .condition(product.getCondition())
+                .location(product.getLocation())
+                .rating(product.getRating())
+                .reviewCount(product.getReviewCount())
                 .isAvailable(product.getIsAvailable())
+                .isFeatured(product.getIsFeatured())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();

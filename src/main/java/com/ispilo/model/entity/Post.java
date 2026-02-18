@@ -14,7 +14,8 @@ import java.util.List;
 @Entity
 @Table(name = "posts", indexes = {
     @Index(name = "idx_user_id", columnList = "user_id"),
-    @Index(name = "idx_created_at", columnList = "created_at")
+    @Index(name = "idx_created_at", columnList = "created_at"),
+    @Index(name = "idx_is_sponsored", columnList = "is_sponsored")
 })
 @Data
 @NoArgsConstructor
@@ -32,14 +33,19 @@ public class Post {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(length = 2000, nullable = false)
+    private String content;
+
     @Column(length = 2000)
-    private String description;
+    private String description; // Alias for content
 
     @ElementCollection
     @CollectionTable(name = "post_media", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "media_url")
     @Builder.Default
     private List<String> mediaUrls = new ArrayList<>();
+
+    private String imageUrl; // Primary image
 
     @Column(name = "likes_count")
     @Builder.Default
@@ -52,6 +58,28 @@ public class Post {
     @Column(name = "view_count")
     @Builder.Default
     private Integer viewCount = 0;
+
+    @Column(name = "is_liked")
+    @Builder.Default
+    private Boolean isLiked = false;
+
+    @Column(name = "is_saved")
+    @Builder.Default
+    private Boolean isSaved = false;
+
+    @Column(name = "is_sponsored")
+    @Builder.Default
+    private Boolean isSponsored = false;
+
+    @Column(name = "has_verification")
+    @Builder.Default
+    private Boolean hasVerification = false;
+
+    @ElementCollection
+    @CollectionTable(name = "post_cta_buttons", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "button_text")
+    @Builder.Default
+    private List<String> ctaButtons = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt DESC")

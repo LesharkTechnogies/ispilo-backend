@@ -51,6 +51,14 @@ public class Seller {
     @Column(name = "verification_document")
     private String verificationDocument;
 
+    @Column(name = "rating", columnDefinition = "DECIMAL(3,1) DEFAULT 4.5")
+    @Builder.Default
+    private Double rating = 4.5;
+
+    @Column(name = "total_sales")
+    @Builder.Default
+    private Integer totalSales = 0;
+
     @OneToMany(mappedBy = "seller", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Product> products = new ArrayList<>();
@@ -62,5 +70,29 @@ public class Seller {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-}
 
+    // Helper methods for backward compatibility
+    public String getName() {
+        return businessName;
+    }
+
+    public String getAvatar() {
+        return businessLogo;
+    }
+    
+    public String getPhone() {
+        return user != null ? user.getPhone() : null;
+    }
+    
+    public Boolean getIsVerified() {
+        return isVerified;
+    }
+    
+    public Double getRating() {
+        return rating;
+    }
+    
+    public Integer getTotalSales() {
+        return totalSales;
+    }
+}

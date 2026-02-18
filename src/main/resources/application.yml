@@ -3,9 +3,9 @@ spring:
     name: ispilo-backend
 
   datasource:
-    url: jdbc:mysql://localhost:3306/ispilo_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/ispilo_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: ${DB_PASSWORD:password}
+    password: ${DB_PASSWORD:Comein@254.}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -23,29 +23,23 @@ spring:
       max-request-size: 50MB
 
   cache:
-    type: redis
-
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
+    type: simple
 
 server:
   port: 8080
   error:
     include-message: always
     include-binding-errors: always
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 25
+    accept-count: 200
 
 jwt:
   secret: ${JWT_SECRET:MjU2Yml0c2VjcmV0a2V5Zm9yaXNwaWxvYXBwbGljYXRpb25jaGFuZ2VpbnByb2R1Y3Rpb24=}
   expiration: 86400000
   refresh-expiration: 604800000
-
-aws:
-  s3:
-    bucket: ${S3_BUCKET:ispilo-media}
-    region: ${AWS_REGION:us-east-1}
-    access-key: ${AWS_ACCESS_KEY:}
-    secret-key: ${AWS_SECRET_KEY:}
 
 app:
   base-url: ${BASE_URL:http://localhost:8080}
@@ -69,4 +63,3 @@ logging:
     com.ispilo: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
-

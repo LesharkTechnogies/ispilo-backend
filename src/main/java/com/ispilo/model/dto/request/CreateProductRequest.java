@@ -3,31 +3,26 @@ package com.ispilo.model.dto.request;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class CreateProductRequest {
+public record CreateProductRequest(
+    @NotBlank(message = "Product title is required")
+    String title,
 
-    @NotBlank(message = "Product name is required")
-    private String name;
-
-    private String description;
+    String description,
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
-    private BigDecimal price;
+    BigDecimal price,
 
-    private Integer stockQuantity;
-    private List<String> images;
-    private String category;
-}
-
+    Integer stockQuantity,
+    String mainImage,
+    List<String> images,
+    String category,
+    String condition,
+    String location
+) {}

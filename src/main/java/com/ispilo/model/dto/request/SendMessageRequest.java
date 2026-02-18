@@ -29,4 +29,6 @@ public class SendMessageRequest {
      */
     @NotBlank(message = "Client message ID is required")
     private String clientMsgId;
+
+    private String encryptionKey;
 }

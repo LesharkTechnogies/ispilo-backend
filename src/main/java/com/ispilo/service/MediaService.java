@@ -1,8 +1,5 @@
 package com.ispilo.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.ispilo.model.dto.response.MediaUploadResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,17 +20,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MediaService {
 
-    @Value("${aws.s3.bucket}")
-    private String bucketName;
+    @Value("${app.base-url}")
+    private String baseUrl;
 
-    @Value("${app.cdn-url}")
-    private String cdnUrl;
-
-    private final AmazonS3 s3Client;
+    // Directory to store uploaded files locally
+    private static final String UPLOAD_DIR = "uploads";
 
     public MediaUploadResponse uploadFile(MultipartFile file, String type, String userId) {
         String fileName = generateFileName(file, userId, type);
-        String fileUrl = uploadToS3(file, fileName);
+        String fileUrl = uploadToLocal(file, fileName);
 
         return MediaUploadResponse.builder()
                 .mediaUrl(fileUrl)
@@ -40,17 +39,27 @@ public class MediaService {
                 .build();
     }
 
-    private String uploadToS3(MultipartFile file, String fileName) {
+    private String uploadToLocal(MultipartFile file, String fileName) {
         try {
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.getSize());
-            metadata.setContentType(file.getContentType());
+            // Create the upload directory if it doesn't exist
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
 
-            s3Client.putObject(new PutObjectRequest(bucketName, fileName, file.getInputStream(), metadata));
+            // Resolve the full file path
+            // We flatten the path structure for simplicity in local storage, replacing slashes with underscores
+            String safeFileName = fileName.replace("/", "_");
+            Path filePath = uploadPath.resolve(safeFileName);
 
-            return String.format("%s/%s", cdnUrl, fileName);
+            // Save the file
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Return the URL to access the file
+            // Assuming we have a controller to serve static files from /media/**
+            return String.format("%s/media/%s", baseUrl, safeFileName);
         } catch (IOException e) {
-            log.error("Failed to upload file to S3", e);
+            log.error("Failed to upload file locally", e);
             throw new RuntimeException("File upload failed");
         }
     }

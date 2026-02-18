@@ -15,7 +15,9 @@ import java.util.List;
 @Entity
 @Table(name = "products", indexes = {
     @Index(name = "idx_seller_id", columnList = "seller_id"),
-    @Index(name = "idx_created_at", columnList = "created_at")
+    @Index(name = "idx_category", columnList = "category"),
+    @Index(name = "idx_created_at", columnList = "created_at"),
+    @Index(name = "idx_rating", columnList = "rating")
 })
 @Data
 @NoArgsConstructor
@@ -34,7 +36,10 @@ public class Product {
     private Seller seller;
 
     @Column(nullable = false)
-    private String name;
+    private String title;
+
+    @Column(nullable = false)
+    private String name; // Alias for title for backward compatibility
 
     @Column(length = 2000)
     private String description;
@@ -43,7 +48,8 @@ public class Product {
     private BigDecimal price;
 
     @Column(name = "stock_quantity")
-    private Integer stockQuantity;
+    @Builder.Default
+    private Integer stockQuantity = 0;
 
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
@@ -51,11 +57,30 @@ public class Product {
     @Builder.Default
     private List<String> images = new ArrayList<>();
 
+    private String mainImage; // Primary image URL
+
     private String category;
+
+    @Column(name = "condition_type")
+    private String condition; // New, Used, Refurbished
+
+    @Column(name = "rating", columnDefinition = "DECIMAL(3,1) DEFAULT 4.5")
+    @Builder.Default
+    private Double rating = 4.5;
+
+    @Column(name = "review_count")
+    @Builder.Default
+    private Integer reviewCount = 0;
+
+    private String location;
 
     @Column(name = "is_available")
     @Builder.Default
     private Boolean isAvailable = true;
+
+    @Column(name = "is_featured")
+    @Builder.Default
+    private Boolean isFeatured = false;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -65,4 +90,3 @@ public class Product {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
-
