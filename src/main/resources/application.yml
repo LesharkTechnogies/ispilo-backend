@@ -3,17 +3,17 @@ spring:
     name: ispilo-backend
 
   datasource:
-    url: jdbc:mysql://localhost:3306/ispilo_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: ${DB_PASSWORD:Comein@254.}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${JDBC_DATABASE_URL:jdbc:mysql://localhost:3306/ispilo_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${JDBC_DATABASE_USERNAME:root}
+    password: ${JDBC_DATABASE_PASSWORD:Comein@254.}
+    driver-class-name: ${JDBC_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
 
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
         format_sql: true
     show-sql: true
 
