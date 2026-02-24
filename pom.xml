@@ -62,15 +62,11 @@
         </dependency>
 
         <!-- Database -->
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!-- Removed MySQL dependency to avoid conflicts -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
+            <!-- Removed scope runtime to ensure it's available for class loading if needed -->
         </dependency>
 
         <!-- JWT -->
