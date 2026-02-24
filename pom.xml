@@ -153,6 +153,7 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <fork>true</fork>
                 </configuration>
             </plugin>
         </plugins>
