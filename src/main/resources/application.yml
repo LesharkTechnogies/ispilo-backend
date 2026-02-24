@@ -3,9 +3,12 @@ spring:
     name: ispilo-backend
 
   datasource:
-    url: ${JDBC_DATABASE_URL:jdbc:mysql://localhost:3306/ispilo_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-    username: ${JDBC_DATABASE_USERNAME:root}
-    password: ${JDBC_DATABASE_PASSWORD:Comein@254.}
+    # Heroku provides DATABASE_URL. We use it if available.
+    # If not, we fall back to the local MySQL configuration.
+    # Note: Spring Boot automatically translates 'postgres://' to 'jdbc:postgresql://' for the standard DATABASE_URL
+    url: ${JDBC_DATABASE_URL:${DATABASE_URL:jdbc:mysql://localhost:3306/ispilo_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}}
+    username: ${JDBC_DATABASE_USERNAME:${DATABASE_USERNAME:root}}
+    password: ${JDBC_DATABASE_PASSWORD:${DATABASE_PASSWORD:Comein@254.}}
     driver-class-name: ${JDBC_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
 
   jpa:
@@ -13,7 +16,8 @@ spring:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
+        # Let Hibernate detect the dialect automatically based on the driver
+        # dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
         format_sql: true
     show-sql: true
 
