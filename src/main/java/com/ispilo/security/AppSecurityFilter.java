@@ -30,6 +30,8 @@ public class AppSecurityFilter extends OncePerRequestFilter {
 
     // Endpoints that don't require app ID validation
     private static final String[] PUBLIC_ENDPOINTS = {
+            "/",                  // Root endpoint (Home controller)
+            "/health",            // Health check
             "/api/auth/register",
             "/api/auth/login",
             "/api/app/register",  // New app registration endpoint
@@ -100,8 +102,13 @@ public class AppSecurityFilter extends OncePerRequestFilter {
      * Check if endpoint is public (doesn't require app ID)
      */
     private boolean isPublicEndpoint(String path) {
+        // Exact match for root
+        if (path.equals("/")) {
+            return true;
+        }
+        
         for (String publicEndpoint : PUBLIC_ENDPOINTS) {
-            if (path.startsWith(publicEndpoint)) {
+            if (!publicEndpoint.equals("/") && path.startsWith(publicEndpoint)) {
                 return true;
             }
         }
