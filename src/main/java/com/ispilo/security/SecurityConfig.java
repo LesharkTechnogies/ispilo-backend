@@ -31,6 +31,7 @@ public class SecurityConfig {
             .cors(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/health", "/error").permitAll() // Explicitly allow root, health, and error pages
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/app/**").permitAll() // Allow app registration endpoints
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
