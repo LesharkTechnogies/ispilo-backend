@@ -185,10 +185,10 @@ public class ProductController {
     @Operation(summary = "Add review to product")
     public ResponseEntity<?> addProductReview(
             @PathVariable String productId,
-            @Valid @RequestBody AddReviewRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody AddReviewRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.addProductReview(productId, userDetails.getUsername(), request));
+                .body(productService.addProductReview(userDetails.getUsername(), productId, request));
     }
 
     public record MessageResponse(String message) {}

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -19,12 +20,13 @@ public interface PostViewRepository extends JpaRepository<PostView, Long> {
     Set<String> findRecentViewedPostIds(@Param("userId") String userId, @Param("cutoff") LocalDateTime cutoff);
 
     @Modifying
+    @Transactional
     @Query(value = "INSERT INTO post_views (user_id, post_id, view_percentage, view_duration_ms, is_viewed_completely, last_viewed_at, created_at) " +
-            "VALUES (:userId, :postId, :viewPercentage, :viewDurationMs, :isViewedCompletely, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
-            "ON DUPLICATE KEY UPDATE " +
-            "view_percentage = GREATEST(view_percentage, :viewPercentage), " +
-            "view_duration_ms = view_duration_ms + :viewDurationMs, " +
-            "is_viewed_completely = (view_percentage >= :threshold), " +
+            "VALUES (:userId, :postId, :viewPercentage, :viewDurationMs, (:viewPercentage >= :threshold), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
+            "ON CONFLICT (user_id, post_id) DO UPDATE SET " +
+            "view_percentage = GREATEST(post_views.view_percentage, EXCLUDED.view_percentage), " +
+            "view_duration_ms = post_views.view_duration_ms + EXCLUDED.view_duration_ms, " +
+            "is_viewed_completely = (GREATEST(post_views.view_percentage, EXCLUDED.view_percentage) >= :threshold), " +
             "last_viewed_at = CURRENT_TIMESTAMP", nativeQuery = true)
     void upsertView(@Param("userId") String userId, 
                     @Param("postId") String postId, 
