@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotBlank;
 
 /**
  * Request to register a new app installation
@@ -15,21 +14,21 @@ import jakarta.validation.constraints.NotBlank;
 @Builder
 public class AppRegistrationRequest {
 
-    @NotBlank(message = "Device ID is required")
+    // Device ID (preferred). If missing, backend will generate a fallback.
     private String deviceId;
 
-    @NotBlank(message = "Device name is required")
+    // Optional metadata; missing values should not block registration.
     private String deviceName;
-
-    @NotBlank(message = "OS version is required")
     private String osVersion;
-
-    @NotBlank(message = "App version is required")
     private String appVersion;
-
-    @NotBlank(message = "Platform (ANDROID/IOS) is required")
-    private String platform;
+    private String platform; // ANDROID, IOS, WEB, etc.
 
     // Device fingerprint (optional)
     private String deviceFingerprint;
+
+    // Client-reported IP address (optional; missing should not block registration)
+    private String ipAddress;
+
+    // User phone (optional at registration; can be supplied later)
+    private String phone;
 }

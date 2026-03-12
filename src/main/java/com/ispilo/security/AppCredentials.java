@@ -9,6 +9,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import jakarta.persistence.Transient;
 
 /**
  * App credentials for device/app identification
@@ -70,6 +72,15 @@ public class AppCredentials {
     @Column(name = "platform")
     private String platform; // ANDROID, IOS
 
+    @Column(name = "ip_address")
+    private String ipAddress;
+
+    @Column(name = "device_fingerprint", length = 512)
+    private String deviceFingerprint;
+
+    @Column(name = "phone", length = 32)
+    private String phone;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -77,4 +88,7 @@ public class AppCredentials {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Transient
+    private List<String> transientMissingFields;
 }

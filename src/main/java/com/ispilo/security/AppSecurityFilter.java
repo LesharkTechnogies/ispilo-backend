@@ -33,11 +33,14 @@ public class AppSecurityFilter extends OncePerRequestFilter {
             "/",                  // Root endpoint (Home controller)
             "/health",            // Health check
             "/api/auth/register",
-            "/api/auth/login",
-            "/api/app/register",  // New app registration endpoint
+        "/api/auth/login",
+        "/api/registerApp",      // Web-facing alias (no version)
+        "/api/app/public-key",   // Alias (no version)
+        "/api/v1/registerApp",   // Canonical v1 registration
+        "/api/v1/app/public-key",// Canonical v1 public key
             "/swagger-ui",
             "/v3/api-docs",
-            "/api/app/public-key" // Allow fetching public key without full validation
+        "/health"
     };
 
     @Override

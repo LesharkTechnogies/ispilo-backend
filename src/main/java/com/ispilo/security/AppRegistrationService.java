@@ -9,7 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.UUID;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Service for managing app registration and credentials
@@ -42,36 +46,73 @@ public class AppRegistrationService {
      */
     public AppCredentials registerApp(AppRegistrationRequest request) {
         try {
-            // Generate unique app credentials
-            String appPrivateKey = encryptionService.generateAppPrivateKey();
-            String appId = encryptionService.generateAppId();
+        // Generate unique app credentials
+        String appPrivateKey = encryptionService.generateAppPrivateKey();
+        String appId = encryptionService.generateAppId();
+
+        // Allow missing fields by providing safe defaults
+        String deviceId = (request.getDeviceId() == null || request.getDeviceId().isBlank())
+            ? "device-" + UUID.randomUUID()
+            : request.getDeviceId();
+
+        String deviceName = defaultValue(request.getDeviceName(), "unknown");
+        String osVersion = defaultValue(request.getOsVersion(), "unknown");
+        String appVersion = defaultValue(request.getAppVersion(), "unknown");
+        String platform = defaultValue(request.getPlatform(), "unknown");
+        String ipAddress = defaultValue(request.getIpAddress(), null);
+        String deviceFingerprint = defaultValue(request.getDeviceFingerprint(), null);
+            String phone = defaultValue(request.getPhone(), null);
+
+        List<String> missingFields = collectMissingFields(request);
 
             // Create app credentials
             AppCredentials credentials = AppCredentials.builder()
                     .appPrivateKey(appPrivateKey)
                     .appId(appId)
-                    .deviceId(request.getDeviceId())
+            .deviceId(deviceId)
                     .serverPublicKey(encryptionService.publicKeyToString(serverKeyPair.getPublic()))
                     .encryptionAlgorithm("RSA-4096/AES-256/SHA-256")
                     .registeredAt(System.currentTimeMillis())
                     .isActive(true)
-                    .deviceName(request.getDeviceName())
-                    .osVersion(request.getOsVersion())
-                    .appVersion(request.getAppVersion())
-                    .platform(request.getPlatform())
+            .deviceName(deviceName)
+            .osVersion(osVersion)
+            .appVersion(appVersion)
+            .platform(platform)
+            .ipAddress(ipAddress)
+            .deviceFingerprint(deviceFingerprint)
+            .phone(phone)
                     .build();
 
-            // Save to database
-            appCredentialsRepository.save(credentials);
+            // Save to database with null-safety guard
+            appCredentialsRepository.save(Objects.requireNonNull(credentials));
 
             log.info("App registered successfully - App ID: {}, Device: {}", appId, request.getDeviceId());
 
             // Return credentials to app (app private key only once!)
+            // Attach missing fields info into a transient holder inside credentials (not persisted)
+            credentials.setTransientMissingFields(missingFields);
             return credentials;
         } catch (Exception e) {
             log.error("Error registering app", e);
             throw new RuntimeException("Failed to register app", e);
         }
+    }
+
+    private List<String> collectMissingFields(AppRegistrationRequest request) {
+        List<String> missing = new ArrayList<>();
+        if (isBlank(request.getDeviceId())) missing.add("deviceId");
+        if (isBlank(request.getDeviceName())) missing.add("deviceName");
+        if (isBlank(request.getOsVersion())) missing.add("osVersion");
+        if (isBlank(request.getAppVersion())) missing.add("appVersion");
+        if (isBlank(request.getPlatform())) missing.add("platform");
+        if (isBlank(request.getIpAddress())) missing.add("ipAddress");
+        if (isBlank(request.getDeviceFingerprint())) missing.add("deviceFingerprint");
+        if (isBlank(request.getPhone())) missing.add("phone");
+        return missing;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**
@@ -125,6 +166,44 @@ public class AppRegistrationService {
     }
 
     /**
+     * Update metadata for an existing app using its appId and appPrivateKey.
+     */
+    public AppCredentials updateMetadata(AppMetadataUpdateRequest request) {
+        Optional<AppCredentials> credsOpt = getAppCredentials(request.getAppId());
+        if (credsOpt.isEmpty()) {
+            throw new IllegalArgumentException("Invalid appId");
+        }
+
+        AppCredentials creds = credsOpt.get();
+        if (!creds.getAppPrivateKey().equals(request.getAppPrivateKey())) {
+            throw new IllegalArgumentException("Invalid appPrivateKey");
+        }
+
+        if (!isBlank(request.getDeviceName())) creds.setDeviceName(request.getDeviceName());
+        if (!isBlank(request.getOsVersion())) creds.setOsVersion(request.getOsVersion());
+        if (!isBlank(request.getAppVersion())) creds.setAppVersion(request.getAppVersion());
+        if (!isBlank(request.getPlatform())) creds.setPlatform(request.getPlatform());
+        if (!isBlank(request.getIpAddress())) creds.setIpAddress(request.getIpAddress());
+        if (!isBlank(request.getDeviceFingerprint())) creds.setDeviceFingerprint(request.getDeviceFingerprint());
+        if (!isBlank(request.getPhone())) creds.setPhone(request.getPhone());
+
+        appCredentialsRepository.save(creds);
+
+        // Recompute missing fields after update
+        List<String> missing = new ArrayList<>();
+        if (isBlank(creds.getDeviceName())) missing.add("deviceName");
+        if (isBlank(creds.getOsVersion())) missing.add("osVersion");
+        if (isBlank(creds.getAppVersion())) missing.add("appVersion");
+        if (isBlank(creds.getPlatform())) missing.add("platform");
+        if (isBlank(creds.getIpAddress())) missing.add("ipAddress");
+        if (isBlank(creds.getDeviceFingerprint())) missing.add("deviceFingerprint");
+        if (isBlank(creds.getPhone())) missing.add("phone");
+        creds.setTransientMissingFields(missing);
+
+        return creds;
+    }
+
+    /**
      * Deactivate app (device uninstall/logout)
      */
     public void deactivateApp(String appId) {
@@ -153,5 +232,9 @@ public class AppRegistrationService {
      */
     public PrivateKey getServerPrivateKey() {
         return serverKeyPair.getPrivate();
+    }
+
+    private String defaultValue(String value, String fallback) {
+        return (value == null || value.isBlank()) ? fallback : value;
     }
 }
