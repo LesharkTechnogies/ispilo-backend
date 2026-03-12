@@ -32,8 +32,13 @@ public class AppSecurityFilter extends OncePerRequestFilter {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/",                  // Root endpoint (Home controller)
             "/health",            // Health check
-            "/api/auth/register",
-        "/api/auth/login",
+            "/api/v1/auth/register",   // Legacy mapping
+        "/api/v1/auth/login",
+            "/api/auth/register", // Canonical v1 auth
+        "/api/auth/login",       // Canonical v1 auth
+        "/api/app/version",     // App version (alias)
+        "/api/v1/app/version",  // App version (canonical)
+        "/api/v2/app/version",  // App version (v2 alias)
         "/api/registerApp",      // Web-facing alias (no version)
         "/api/app/public-key",   // Alias (no version)
         "/api/v1/registerApp",   // Canonical v1 registration
@@ -48,6 +53,19 @@ public class AppSecurityFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String requestPath = request.getServletPath();
+
+        // Allow all preflight requests
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            String origin = request.getHeader("Origin");
+            String allowOrigin = origin != null ? origin : "*";
+            response.setHeader("Access-Control-Allow-Origin", allowOrigin);
+            response.setHeader("Vary", "Origin");
+            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+            response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, X-App-Version, X-Build-Number, X-Platform, X-IP, X-App-ID, X-Device-ID, X-App-Signature, X-Timestamp, X-Nonce");
+            response.setHeader("Access-Control-Max-Age", "3600");
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
 
         // Skip validation for public endpoints
         if (isPublicEndpoint(requestPath)) {

@@ -20,6 +20,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping({"/api/v1", "/api", "/api/v2"})
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE, RequestMethod.OPTIONS})
 @RequiredArgsConstructor
 @Slf4j
 public class AppPublicController {
