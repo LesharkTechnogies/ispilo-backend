@@ -1,6 +1,9 @@
 package com.ispilo.security;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.config.Customizer;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +17,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -28,21 +34,24 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(AbstractHttpConfigurer::disable)
+            .cors(Customizer.withDefaults()) // enable CORS
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/health", "/error").permitAll() // Explicitly allow root, health, and error pages
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/app/**").permitAll() // Allow app registration endpoints
+                .requestMatchers("/", "/health", "/error").permitAll()
+                .requestMatchers(
+                    "/app/version", "/app/public-key", "/registerApp",
+                    "/api/app/**",
+                    "/api/v1/app/version", "/api/v1/app/public-key", "/api/v1/registerApp",
+                    "/api/v2/app/version", "/api/v2/app/public-key", "/api/v2/registerApp",
+                    "/api/auth/**"
+                ).permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .anyRequest().authenticated()
             );
 
-        // Add AppSecurityFilter before JwtAuthenticationFilter to validate app credentials first
         http.addFilterBefore(appSecurityFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
