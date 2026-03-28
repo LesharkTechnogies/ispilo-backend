@@ -30,46 +30,32 @@ public class AppSecurityFilter extends OncePerRequestFilter {
 
     // Endpoints that don't require app ID validation
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/",                  // Root endpoint (Home controller)
-            "/health",            // Health check
-            "/api/v1/auth/register",   // Legacy mapping
-        "/api/v1/auth/login",
-            "/api/auth/register", // Canonical v1 auth
-        "/api/auth/login",       // Canonical v1 auth
-        "/api/app/version",     // App version (alias)
-        "/api/v1/app/version",  // App version (canonical)
-        "/api/v2/app/version",  // App version (v2 alias)
-        "/api/registerApp",      // Web-facing alias (no version)
-        "/api/app/public-key",   // Alias (no version)
-        "/api/v1/registerApp",   // Canonical v1 registration
-        "/api/v1/app/public-key",// Canonical v1 public key
-            "/swagger-ui",
-            "/v3/api-docs",
-        "/health"
+        "/", "/health",
+        "/api/app/version", "/api/v1/app/version", "/api/v2/app/version",
+        "/api/app/public-key", "/api/v1/app/public-key", "/api/v2/app/public-key",
+        "/api/registerApp", "/api/v1/registerApp", "/api/v2/registerApp",
+        "/api/auth/register", "/api/v1/auth/register", "/api/auth/login", "/api/v1/auth/login",
+        "/v3/api-docs", "/swagger-ui"
     };
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
-        String requestPath = request.getServletPath();
-
-        // Allow all preflight requests
+        // CORS preflight: allow and return
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            String origin = request.getHeader("Origin");
-            String allowOrigin = origin != null ? origin : "*";
-            response.setHeader("Access-Control-Allow-Origin", allowOrigin);
+            response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin") == null ? "*" : request.getHeader("Origin"));
             response.setHeader("Vary", "Origin");
-            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-            response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, X-App-Version, X-Build-Number, X-Platform, X-IP, X-App-ID, X-Device-ID, X-App-Signature, X-Timestamp, X-Nonce");
-            response.setHeader("Access-Control-Max-Age", "3600");
+            response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+            response.setHeader("Access-Control-Allow-Headers", "Origin,Content-Type,Accept,Authorization,X-App-ID,X-Device-ID,X-App-Signature,X-Timestamp,X-Nonce,X-App-Version,X-Build-Number,X-Platform,X-IP");
+            response.setHeader("Access-Control-Expose-Headers", "Authorization,X-API-Version,X-API-Deprecated,X-API-Upgrade-To,X-API-Message");
             response.setStatus(HttpServletResponse.SC_OK);
             return;
         }
 
-        // Skip validation for public endpoints
-        if (isPublicEndpoint(requestPath)) {
-            filterChain.doFilter(request, response);
+        String path = request.getRequestURI();
+        if (isPublic(path)) {
+            chain.doFilter(request, response);
             return;
         }
 
@@ -88,7 +74,7 @@ public class AppSecurityFilter extends OncePerRequestFilter {
             response.getWriter().write("{\"error\": \"Missing app credentials. Please include X-App-ID and X-Device-ID headers\"}");
             return;
             */
-            filterChain.doFilter(request, response);
+            chain.doFilter(request, response);
             return;
         }
 
@@ -116,7 +102,7 @@ public class AppSecurityFilter extends OncePerRequestFilter {
 
         log.debug("App verified - App ID: {}, Device: {}", appId, deviceId);
 
-        filterChain.doFilter(request, response);
+        chain.doFilter(request, response);
     }
 
     /**
