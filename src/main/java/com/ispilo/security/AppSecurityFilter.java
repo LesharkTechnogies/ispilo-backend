@@ -54,7 +54,7 @@ public class AppSecurityFilter extends OncePerRequestFilter {
         }
 
         String path = request.getRequestURI();
-        if (isPublic(path)) {
+        if (isPublicEndpoint(path)) {
             chain.doFilter(request, response);
             return;
         }
