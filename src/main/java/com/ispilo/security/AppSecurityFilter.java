@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -31,9 +32,9 @@ public class AppSecurityFilter extends OncePerRequestFilter {
     // Endpoints that don't require app ID validation
     private static final String[] PUBLIC_ENDPOINTS = {
         "/", "/health",
-        "/api/app/version", "/api/v1/app/version", "/api/v2/app/version",
-        "/api/app/public-key", "/api/v1/app/public-key", "/api/v2/app/public-key",
-        "/api/registerApp", "/api/v1/registerApp", "/api/v2/registerApp",
+        "/app/version", "/api/app/version", "/api/v1/app/version", "/api/v2/app/version",
+        "/app/public-key", "/api/app/public-key", "/api/v1/app/public-key", "/api/v2/app/public-key",
+        "/registerApp", "/api/registerApp", "/api/v1/registerApp", "/api/v2/registerApp",
         "/api/auth/register", "/api/v1/auth/register", "/api/auth/login", "/api/v1/auth/login",
         "/v3/api-docs", "/swagger-ui"
     };
@@ -120,5 +121,20 @@ public class AppSecurityFilter extends OncePerRequestFilter {
             }
         }
         return false;
+    }
+
+    public void securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+            .requestMatchers(
+                "/","/health",
+                "/app/version","/api/app/version","/api/v1/app/version","/api/v2/app/version",
+                "/app/public-key","/api/app/public-key","/api/v1/app/public-key","/api/v2/app/public-key",
+                "/registerApp","/api/registerApp","/api/v1/registerApp","/api/v2/registerApp",
+                "/api/auth/register","/api/v1/auth/register",
+                "/api/auth/login","/api/v1/auth/login",
+                "/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html"
+            ).permitAll()
+            .anyRequest().authenticated()
+        );
     }
 }
