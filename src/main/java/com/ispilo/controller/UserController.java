@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping({"/api/v1/users", "/api/users", "/api/v2/users"})
 @RequiredArgsConstructor
 @Slf4j
 public class UserController {
