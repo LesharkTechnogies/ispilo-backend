@@ -75,6 +75,14 @@ public class UserController {
         userService.deleteAccount(userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "Account deleted successfully"));
     }
+
+    @PostMapping("/me/password")
+    public ResponseEntity<Map<String, String>> updatePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody com.ispilo.model.dto.request.UpdatePasswordRequest request) {
+        userService.updatePassword(userDetails.getUsername(), request);
+        return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+    }
 }
 
 

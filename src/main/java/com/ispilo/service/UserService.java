@@ -1,6 +1,7 @@
 package com.ispilo.service;
 
 import com.ispilo.exception.NotFoundException;
+import com.ispilo.model.dto.request.UpdatePasswordRequest;
 import com.ispilo.model.dto.request.UpdateProfileRequest;
 import com.ispilo.model.dto.request.UpdateSettingsRequest;
 import com.ispilo.model.dto.response.UserResponse;
@@ -23,6 +24,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final MediaService mediaService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
@@ -178,6 +180,26 @@ public class UserService {
         // TODO: Implement soft delete or full delete with cascade
         userRepository.delete(user);
         log.info("Deleted account for user: {}", email);
+    }
+
+    /**
+     * Update user password
+     */
+    public void updatePassword(String email, UpdatePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new com.ispilo.exception.BadRequestException("New password and confirm password do not match");
+        }
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new com.ispilo.exception.BadRequestException("Incorrect old password");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password updated successfully for user: {}", email);
     }
 
     // Helper methods for stats (TODO: implement with actual database queries)
