@@ -17,7 +17,10 @@ public class PostResponse {
 
     private String id;
     private UserResponse user;
-    private String description;
+    private String content; // text content
+    private String description; // same as content
+    private String imageUrl; // single image preview
+    private String shareUrl; // shareable link
     private List<String> mediaUrls;
     private Integer likesCount;
     private Integer commentsCount;
@@ -29,7 +32,10 @@ public class PostResponse {
         return PostResponse.builder()
                 .id(post.getId())
                 .user(UserResponse.fromEntity(post.getUser()))
+                .content(post.getContent())
                 .description(post.getDescription())
+                .imageUrl(post.getImageUrl())
+                .shareUrl("https://ispilo.com/post/" + post.getId())
                 .mediaUrls(post.getMediaUrls())
                 .likesCount(post.getLikesCount())
                 .commentsCount(post.getCommentsCount())

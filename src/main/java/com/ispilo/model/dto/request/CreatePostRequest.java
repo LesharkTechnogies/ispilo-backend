@@ -16,6 +16,7 @@ public class CreatePostRequest {
 
     private String content; // text content of the post
     private String description; // alias for content
+    private String imageUrl; // single image preview
     private List<String> mediaUrls;
     
     // helper to get the actual text regardless of what frontend sends

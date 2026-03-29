@@ -29,9 +29,10 @@ public class PostService {
 
         Post post = Post.builder()
                 .user(user)
-                .content(postContent)
-                .description(postContent)
-                .mediaUrls(request.getMediaUrls())
+                .content(postContent != null ? postContent : "")
+                .description(postContent != null ? postContent : "")
+                .imageUrl(request.getImageUrl())
+                .mediaUrls(request.getMediaUrls() != null ? request.getMediaUrls() : new java.util.ArrayList<>())
                 .build();
 
         return PostResponse.fromEntity(postRepository.save(post));
@@ -48,14 +49,21 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        if (!post.getUser().getUsername().equals(username)) {
+        User authUser = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
+        if (!post.getUser().getId().equals(authUser.getId())) {
             throw new UnauthorizedException("You are not authorized to update this post");
         }
 
         String updatedContent = request.getActualContent();
-        if (!updatedContent.isEmpty()) {
+        if (updatedContent != null && !updatedContent.isEmpty()) {
             post.setContent(updatedContent);
             post.setDescription(updatedContent);
+        }
+        if (request.getImageUrl() != null) {
+            post.setImageUrl(request.getImageUrl());
         }
         if (request.getMediaUrls() != null) {
             post.setMediaUrls(request.getMediaUrls());
@@ -69,7 +77,11 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        if (!post.getUser().getUsername().equals(username)) {
+        User authUser = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
+        if (!post.getUser().getId().equals(authUser.getId())) {
             throw new UnauthorizedException("You are not authorized to delete this post");
         }
 
