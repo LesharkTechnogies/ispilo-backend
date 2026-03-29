@@ -20,6 +20,30 @@ public class PostController {
     private final FeedService feedService;
     private final com.ispilo.service.PostService postService;
 
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<PostResponse> toggleLike(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String postId) {
+        return ResponseEntity.ok(postService.toggleLike(userDetails.getUsername(), postId));
+    }
+
+    @PostMapping("/{postId}/comments")
+    public ResponseEntity<com.ispilo.model.dto.response.CommentResponse> addComment(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String postId,
+            @RequestBody com.ispilo.model.dto.request.CreateCommentRequest request) {
+        return ResponseEntity.ok(postService.addComment(userDetails.getUsername(), postId, request));
+    }
+
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<Page<com.ispilo.model.dto.response.CommentResponse>> getPostComments(
+            @PathVariable String postId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(postService.getPostComments(postId, pageable));
+    }
+
     @PostMapping
     public ResponseEntity<PostResponse> createPost(
             @AuthenticationPrincipal UserDetails userDetails,
