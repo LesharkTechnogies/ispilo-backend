@@ -14,7 +14,14 @@ import java.util.List;
 @Builder
 public class CreatePostRequest {
 
-    private String content;
+    private String content; // text content of the post
+    private String description; // alias for content
     private List<String> mediaUrls;
+    
+    // helper to get the actual text regardless of what frontend sends
+    public String getActualContent() {
+        if (content != null && !content.isEmpty()) return content;
+        return description != null ? description : "";
+    }
 }
 

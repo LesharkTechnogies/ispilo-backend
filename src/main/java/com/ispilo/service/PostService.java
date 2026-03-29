@@ -21,13 +21,16 @@ public class PostService {
 
     @Transactional
     public PostResponse createPost(String username, CreatePostRequest request) {
-        User user = userRepository.findById(username)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
+        String postContent = request.getActualContent();
 
         Post post = Post.builder()
                 .user(user)
-                .content(request.getContent() != null ? request.getContent() : "")
-                .description(request.getContent() != null ? request.getContent() : "")
+                .content(postContent)
+                .description(postContent)
                 .mediaUrls(request.getMediaUrls())
                 .build();
 
@@ -49,9 +52,10 @@ public class PostService {
             throw new UnauthorizedException("You are not authorized to update this post");
         }
 
-        if (request.getContent() != null) {
-            post.setContent(request.getContent());
-            post.setDescription(request.getContent());
+        String updatedContent = request.getActualContent();
+        if (!updatedContent.isEmpty()) {
+            post.setContent(updatedContent);
+            post.setDescription(updatedContent);
         }
         if (request.getMediaUrls() != null) {
             post.setMediaUrls(request.getMediaUrls());
