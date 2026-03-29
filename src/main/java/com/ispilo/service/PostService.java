@@ -21,7 +21,7 @@ public class PostService {
 
     @Transactional
     public PostResponse createPost(String username, CreatePostRequest request) {
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findById(username)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
         Post post = Post.builder()

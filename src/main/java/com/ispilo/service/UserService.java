@@ -24,7 +24,6 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final MediaService mediaService;
-    private final NotificationService notificationService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public UserResponse getUserByEmail(String email) {
