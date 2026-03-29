@@ -22,10 +22,17 @@ public class FeedService {
 
     private final PostRepository postRepository;
     private final PostViewRepository postViewRepository;
+    private final com.ispilo.repository.UserRepository userRepository;
 
     private static final double VIEW_THRESHOLD = 0.7; // 70% of post must be viewed
 
-    public Page<PostResponse> getPersonalizedFeed(String userId, Pageable pageable) {
+    public Page<PostResponse> getPersonalizedFeed(String username, Pageable pageable) {
+        // Get user ID
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new com.ispilo.exception.NotFoundException("User not found")));
+        String userId = user.getId();
+
         // Get posts viewed in last 7 days to exclude them
         LocalDateTime cutoff = LocalDateTime.now().minusDays(7);
         Set<String> viewedPostIds = postViewRepository.findRecentViewedPostIds(userId, cutoff);
@@ -41,8 +48,12 @@ public class FeedService {
     }
 
     @Transactional
-    public void trackPostView(String userId, String postId, Double viewPercentage, Integer viewDurationMs) {
-        postViewRepository.upsertView(userId, postId, viewPercentage, viewDurationMs, VIEW_THRESHOLD);
+    public void trackPostView(String username, String postId, Double viewPercentage, Integer viewDurationMs) {
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new com.ispilo.exception.NotFoundException("User not found")));
+        
+        postViewRepository.upsertView(user.getId(), postId, viewPercentage, viewDurationMs, VIEW_THRESHOLD);
         updatePostViewCount(postId);
     }
 

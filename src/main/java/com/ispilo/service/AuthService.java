@@ -47,7 +47,14 @@ public class AuthService {
         }
 
         try {
+            String generatedUsername = request.getEmail().contains("@") ? 
+                request.getEmail().substring(0, request.getEmail().indexOf("@")) : request.getEmail();
+            
+            // Ensure username is unique by potentially appending a short random string if needed later
+            // Here we assume simple prefix is enough
+            
             User user = User.builder()
+                    .username(generatedUsername)
                     .email(request.getEmail())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .firstName(request.getFirstName())

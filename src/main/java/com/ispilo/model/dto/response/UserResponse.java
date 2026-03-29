@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class UserResponse {
 
     private String id;
+    private String username;
     private String email;
     private String firstName;
     private String lastName;
@@ -36,6 +37,9 @@ public class UserResponse {
     public static UserResponse fromEntity(User user) {
         return UserResponse.builder()
                 .id(user.getId())
+                .username(user.getUsername() != null ? user.getUsername() :
+                 (user.getEmail() != null && user.getEmail().contains("@") ?
+                 user.getEmail().substring(0, user.getEmail().indexOf("@")) : user.getEmail()))
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())

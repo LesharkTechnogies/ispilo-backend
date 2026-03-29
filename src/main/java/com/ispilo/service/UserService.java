@@ -24,12 +24,23 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final MediaService mediaService;
+    private final NotificationService notificationService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         return UserResponse.fromEntity(user);
+    }
+
+    public org.springframework.data.domain.Page<UserResponse> discoverUsers(String username, org.springframework.data.domain.Pageable pageable) {
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+        
+        // Find users other than the current user ordered by creation descending
+        org.springframework.data.domain.Page<User> users = userRepository.findByIdNotOrderByCreatedAtDesc(user.getId(), pageable);
+        return users.map(UserResponse::fromEntity);
     }
 
     public UserResponse updateProfile(String email, UpdateProfileRequest request) {
@@ -187,9 +198,11 @@ public class UserService {
      */
     public void updatePassword(String email, UpdatePasswordRequest request) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseGet(() -> userRepository.findByPhone(email)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
 
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+        String confirm = request.getConfirmPasswordToUse();
+        if (confirm == null || !request.getNewPassword().equals(confirm)) {
             throw new com.ispilo.exception.BadRequestException("New password and confirm password do not match");
         }
 

@@ -13,11 +13,40 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/posts")
+@RequestMapping({"/api/v1/posts", "/api/posts", "/api/v2/posts"})
 @RequiredArgsConstructor
 public class PostController {
 
     private final FeedService feedService;
+    private final com.ispilo.service.PostService postService;
+
+    @PostMapping
+    public ResponseEntity<PostResponse> createPost(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody com.ispilo.model.dto.request.CreatePostRequest request) {
+        return ResponseEntity.ok(postService.createPost(userDetails.getUsername(), request));
+    }
+
+    @GetMapping("/{postId}")
+    public ResponseEntity<PostResponse> getPost(@PathVariable String postId) {
+        return ResponseEntity.ok(postService.getPost(postId));
+    }
+
+    @PutMapping("/{postId}")
+    public ResponseEntity<PostResponse> updatePost(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String postId,
+            @RequestBody com.ispilo.model.dto.request.CreatePostRequest request) {
+        return ResponseEntity.ok(postService.updatePost(userDetails.getUsername(), postId, request));
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<Void> deletePost(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String postId) {
+        postService.deletePost(userDetails.getUsername(), postId);
+        return ResponseEntity.ok().build();
+    }
 
     @GetMapping("/feed")
     public ResponseEntity<Page<PostResponse>> getFeed(

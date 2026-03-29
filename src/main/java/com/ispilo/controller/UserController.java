@@ -24,6 +24,15 @@ public class UserController {
 
     private final UserService userService;
 
+    @GetMapping("/discover")
+    public ResponseEntity<org.springframework.data.domain.Page<UserResponse>> discoverUsers(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return ResponseEntity.ok(userService.discoverUsers(userDetails.getUsername(), pageable));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(userService.getUserByEmail(userDetails.getUsername()));

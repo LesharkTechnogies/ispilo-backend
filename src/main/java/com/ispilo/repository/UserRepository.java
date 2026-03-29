@@ -29,4 +29,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     // Native query using named parameters is also safe, but we should be careful with LIKE clauses
     @Query(value = "SELECT name FROM users WHERE LOWER(name) LIKE LOWER(CONCAT('%', :query, '%')) LIMIT :limit", nativeQuery = true)
     List<String> findTypeaheadSuggestions(@Param("query") String query, @Param("limit") int limit);
+
+    @Query("SELECT u FROM User u WHERE u.id != :id ORDER BY u.createdAt DESC")
+    org.springframework.data.domain.Page<User> findByIdNotOrderByCreatedAtDesc(@Param("id") String id, org.springframework.data.domain.Pageable pageable);
 }
