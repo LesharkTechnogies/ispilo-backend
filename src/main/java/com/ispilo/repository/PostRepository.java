@@ -19,6 +19,8 @@ public interface PostRepository extends JpaRepository<Post, String> {
 
     Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+        Page<Post> findAllByUserIn(List<com.ispilo.model.entity.User> users, Pageable pageable);
+
     // Using named parameters (:viewedPostIds) ensures the collection is handled safely by Hibernate
     @Query(value = "SELECT p.* FROM posts p " +
             "WHERE p.id NOT IN (:viewedPostIds) " +

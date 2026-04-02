@@ -97,11 +97,13 @@ public class ProductService {
     /**
      * Create a new product
      */
-    public ProductResponse createProduct(String userId, CreateProductRequest request) {
+    public ProductResponse createProduct(String username, CreateProductRequest request) {
         // We need to check if user exists, even if we don't use the object directly here
-        if (!userRepository.existsById(userId)) {
-            throw new NotFoundException("User not found");
-        }
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+        
+        String userId = user.getId();
 
         Seller seller = sellerRepository.findByUserId(userId)
                 .orElseThrow(() -> new BadRequestException("User is not a seller. Please register as seller first."));
@@ -139,12 +141,16 @@ public class ProductService {
     /**
      * Update product
      */
-    public ProductResponse updateProduct(String productId, CreateProductRequest request, String userId) {
+    public ProductResponse updateProduct(String productId, CreateProductRequest request, String username) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found"));
 
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
         // Verify ownership
-        if (!product.getSeller().getUser().getId().equals(userId)) {
+        if (!product.getSeller().getUser().getId().equals(user.getId())) {
             throw new BadRequestException("You do not have permission to update this product");
         }
 
@@ -186,12 +192,16 @@ public class ProductService {
     /**
      * Delete product
      */
-    public void deleteProduct(String productId, String userId) {
+    public void deleteProduct(String productId, String username) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found"));
 
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
         // Verify ownership
-        if (!product.getSeller().getUser().getId().equals(userId)) {
+        if (!product.getSeller().getUser().getId().equals(user.getId())) {
             throw new BadRequestException("You do not have permission to delete this product");
         }
 
@@ -202,25 +212,28 @@ public class ProductService {
     /**
      * Add product to user's favorites
      */
-    public void addToFavorites(String userId, String productId) {
-        if (!userRepository.existsById(userId)) {
-            throw new NotFoundException("User not found");
-        }
+    public void addToFavorites(String username, String productId) {
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
 
         if (!productRepository.existsById(productId)) {
             throw new NotFoundException("Product not found");
         }
 
         // TODO: Implement UserFavorite entity and relationship
-        log.info("Product {} added to favorites by user {}", productId, userId);
+        log.info("Product {} added to favorites by user {}", productId, user.getId());
     }
 
     /**
      * Remove product from favorites
      */
-    public void removeFromFavorites(String userId, String productId) {
+    public void removeFromFavorites(String username, String productId) {
+        com.ispilo.model.entity.User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
         // TODO: Implement removal from favorites
-        log.info("Product {} removed from favorites by user {}", productId, userId);
+        log.info("Product {} removed from favorites by user {}", productId, user.getId());
     }
 
     /**
@@ -324,9 +337,10 @@ public class ProductService {
     /**
      * Add review to product
      */
-    public Map<String, Object> addProductReview(String userId, String productId, AddReviewRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+    public Map<String, Object> addProductReview(String username, String productId, AddReviewRequest request) {
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
 
         if (!productRepository.existsById(productId)) {
             throw new NotFoundException("Product not found");
@@ -338,9 +352,9 @@ public class ProductService {
         response.put("rating", request.getRating());
         response.put("comment", request.getComment());
         response.put("reviewer", user.getName());
-        response.put("createdAt", new Date());
+        response.put("createdAt", new java.util.Date());
 
-        log.info("Review added to product {} by user {}", productId, userId);
+        log.info("Review added to product {} by user {}", productId, user.getId());
         return response;
     }
 }

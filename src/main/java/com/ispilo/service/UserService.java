@@ -5,12 +5,16 @@ import com.ispilo.model.dto.request.UpdatePasswordRequest;
 import com.ispilo.model.dto.request.UpdateProfileRequest;
 import com.ispilo.model.dto.request.UpdateSettingsRequest;
 import com.ispilo.model.dto.response.UserResponse;
+import com.ispilo.model.dto.response.UserProfileResponse;
 import com.ispilo.model.entity.User;
+import com.ispilo.model.entity.UserFollow;
 import com.ispilo.repository.UserRepository;
+import com.ispilo.repository.UserFollowRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
@@ -19,12 +23,12 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserFollowRepository userFollowRepository;
     private final MediaService mediaService;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
@@ -37,9 +41,13 @@ public class UserService {
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
         
-        // Find users other than the current user ordered by creation descending
-        org.springframework.data.domain.Page<User> users = userRepository.findByIdNotOrderByCreatedAtDesc(user.getId(), pageable);
-        return users.map(UserResponse::fromEntity);
+        // Find users other than the current user that they have NOT followed yet
+        org.springframework.data.domain.Page<User> users = userRepository.findUsersNotFollowedBy(user.getId(), pageable);
+        return users.map(u -> {
+            UserResponse response = UserResponse.fromEntity(u);
+            response.setIsFollowing(false); // since they are not followed by definition here
+            return response;
+        });
     }
 
     public UserResponse updateProfile(String email, UpdateProfileRequest request) {
@@ -64,6 +72,14 @@ public class UserService {
         }
 
         return UserResponse.fromEntity(userRepository.save(user));
+    }
+
+    public void updateFcmToken(String username, String token) {
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+        user.setFcmToken(token);
+        userRepository.save(user);
     }
 
     public UserResponse updateAvatar(String email, MultipartFile file) {
@@ -157,9 +173,13 @@ public class UserService {
     /**
      * Get complete user profile with all details
      */
-    public Map<String, Object> getUserProfile(String userId) {
+    public Map<String, Object> getUserProfile(String userId, String currentUsername) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
+
+        User currentUser = userRepository.findByEmail(currentUsername)
+                .orElseGet(() -> userRepository.findByPhone(currentUsername)
+                        .orElse(null));
 
         Map<String, Object> profile = new HashMap<>();
         profile.put("id", user.getId());
@@ -173,11 +193,42 @@ public class UserService {
         profile.put("isVerified", user.getIsVerified());
         profile.put("createdAt", user.getCreatedAt());
 
+        boolean isFollowing = false;
+        if (currentUser != null && !currentUser.getId().equals(userId)) {
+            isFollowing = userFollowRepository.existsByFollowerAndFollowing(currentUser, user);
+        }
+        profile.put("isFollowing", isFollowing);
+
         // Add stats
         Map<String, Object> stats = getUserStatsById(userId);
         profile.put("stats", stats);
 
         return profile;
+    }
+
+    public UserProfileResponse getUserProfileById(String userId, UserDetails userDetails) {
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        if (targetUser.getProfilePublic()) {
+            return UserProfileResponse.fromUser(targetUser, true);
+        }
+
+        if (userDetails == null) {
+            return UserProfileResponse.fromUser(targetUser, false);
+        }
+
+        User currentUser = userRepository.findByEmail(userDetails.getUsername())
+                .orElseGet(() -> userRepository.findByPhone(userDetails.getUsername())
+                        .orElse(null));
+
+        if (currentUser == null) {
+            return UserProfileResponse.fromUser(targetUser, false);
+        }
+
+        boolean isFollowing = userFollowRepository.existsByFollowerAndFollowing(currentUser, targetUser);
+
+        return UserProfileResponse.fromUser(targetUser, isFollowing);
     }
 
     /**
@@ -214,6 +265,43 @@ public class UserService {
         log.info("Password updated successfully for user: {}", email);
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public Map<String, Object> toggleFollow(String username, String targetUserId) {
+        User follower = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("Follower not found")));
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new NotFoundException("Target user not found"));
+
+        if (follower.getId().equals(targetUser.getId())) {
+            throw new com.ispilo.exception.BadRequestException("You cannot follow yourself");
+        }
+
+        java.util.Optional<UserFollow> existingFollow = userFollowRepository.findByFollowerAndFollowing(follower, targetUser);
+        boolean isNowFollowing;
+
+        if (existingFollow.isPresent()) {
+            userFollowRepository.delete(existingFollow.get());
+            isNowFollowing = false;
+        } else {
+            UserFollow newFollow = UserFollow.builder()
+                    .follower(follower)
+                    .following(targetUser)
+                    .build();
+            userFollowRepository.save(newFollow);
+            isNowFollowing = true;
+            
+            // TODO: Optional - notify target user
+        }
+
+        return Map.of(
+            "following", isNowFollowing,
+            "followerId", follower.getId(),
+            "targetUserId", targetUser.getId()
+        );
+    }
+
     // Helper methods for stats (TODO: implement with actual database queries)
     private Integer getPostCount(String userId) {
         // TODO: Query from Post table where userId = ?
@@ -221,13 +309,15 @@ public class UserService {
     }
 
     private Integer getFollowersCount(String userId) {
-        // TODO: Query from Follow/UserFollower table where followingId = ?
-        return 0;
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return 0;
+        return userFollowRepository.countByFollowing(user);
     }
 
     private Integer getFollowingCount(String userId) {
-        // TODO: Query from Follow/UserFollower table where followerId = ?
-        return 0;
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return 0;
+        return userFollowRepository.countByFollower(user);
     }
 
     private Integer getConnectionsCount(String userId) {

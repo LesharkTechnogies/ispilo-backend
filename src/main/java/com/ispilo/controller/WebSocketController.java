@@ -1,8 +1,11 @@
 package com.ispilo.controller;
 
+import com.ispilo.model.dto.request.CreateConversationRequest;
 import com.ispilo.model.dto.request.SendMessageRequest;
+import com.ispilo.model.dto.response.ConversationResponse;
 import com.ispilo.model.dto.response.MessageResponse;
 import com.ispilo.security.SecurityEncryptionService;
+import com.ispilo.service.ConversationService;
 import com.ispilo.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +14,9 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
+
+import java.security.Principal;
 
 @Controller
 @RequiredArgsConstructor
@@ -20,8 +24,73 @@ import org.springframework.stereotype.Controller;
 public class WebSocketController {
 
     private final MessageService messageService;
+    private final ConversationService conversationService;
     private final SecurityEncryptionService encryptionService;
     private final SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * Create a new conversation (private or group)
+     * Path: /app/conversation.create
+     */
+    @MessageMapping("/conversation.create")
+    public void createConversation(
+            @Payload CreateConversationRequest request,
+            SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            Principal userPrincipal = headerAccessor.getUser();
+            if (userPrincipal == null) {
+                log.error("Unauthorized attempt to create conversation");
+                sendError(headerAccessor, "Unauthorized");
+                return;
+            }
+
+            String userId = userPrincipal.getName();
+            ConversationResponse response = conversationService.createConversation(userId, request);
+
+            // Notify the creator that the conversation is created
+            messagingTemplate.convertAndSendToUser(
+                    userId,
+                    "/queue/conversation.created",
+                    response
+            );
+
+            log.info("Conversation created successfully: {}", response.getId());
+
+        } catch (Exception e) {
+            log.error("Error creating conversation", e);
+            sendError(headerAccessor, "Failed to create conversation: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Join a conversation to start receiving messages
+     * Path: /app/conversation.join
+     */
+    @MessageMapping("/conversation.join")
+    public void joinConversation(
+            @Payload String conversationId,
+            SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            Principal userPrincipal = headerAccessor.getUser();
+            if (userPrincipal == null) {
+                log.error("Unauthorized attempt to join conversation");
+                sendError(headerAccessor, "Unauthorized");
+                return;
+            }
+
+            String userId = userPrincipal.getName();
+            // Optional: You can add logic here to verify if the user is a participant
+            // of the conversation before allowing them to "join" the topic.
+            // For now, we just log it.
+
+            log.info("User {} joined conversation {}", userId, conversationId);
+
+        } catch (Exception e) {
+            log.error("Error joining conversation", e);
+            sendError(headerAccessor, "Failed to join conversation: " + e.getMessage());
+        }
+    }
+
 
     /**
      * Send encrypted message through WebSocket

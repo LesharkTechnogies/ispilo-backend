@@ -77,10 +77,17 @@ public class User {
     @Builder.Default
     private Boolean isPhoneVerified = false;
 
+    @Column(name = "profile_public")
+    @Builder.Default
+    private Boolean profilePublic = false;
+
     @Column(length = 500)
     private String bio;
 
     private String location;
+
+    @Column(name = "fcm_token")
+    private String fcmToken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

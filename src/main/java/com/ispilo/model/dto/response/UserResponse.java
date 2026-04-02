@@ -33,6 +33,7 @@ public class UserResponse {
     private String location;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean isFollowing; // Added to check if current user follows this user
 
     public static UserResponse fromEntity(User user) {
         return UserResponse.builder()
@@ -57,6 +58,7 @@ public class UserResponse {
                 .location(user.getLocation())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .isFollowing(false) // Default value, will be updated by services if needed
                 .build();
     }
 }

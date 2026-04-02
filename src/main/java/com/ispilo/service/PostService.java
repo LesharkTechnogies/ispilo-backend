@@ -14,13 +14,17 @@ import com.ispilo.repository.PostRepository;
 import com.ispilo.repository.UserRepository;
 import com.ispilo.repository.CommentRepository;
 import com.ispilo.repository.PostLikeRepository;
+import com.ispilo.repository.UserFollowRepository;
+import com.ispilo.model.entity.UserFollow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,21 @@ public class PostService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
+    private final NotificationService notificationService;
+    private final UserFollowRepository userFollowRepository;
+
+    public Page<PostResponse> getFeed(String username, Pageable pageable) {
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
+        List<User> followingUsers = userFollowRepository.findAllByFollower(user).stream()
+                .map(UserFollow::getFollowing)
+                .collect(Collectors.toList());
+
+        return postRepository.findAllByUserIn(followingUsers, pageable)
+                .map(PostResponse::fromEntity);
+    }
 
     @Transactional
     public PostResponse createPost(String username, CreatePostRequest request) {
@@ -47,7 +66,14 @@ public class PostService {
                 .mediaUrls(request.getMediaUrls() != null ? request.getMediaUrls() : new java.util.ArrayList<>())
                 .build();
 
-        return PostResponse.fromEntity(postRepository.save(post));
+        post = postRepository.save(post);
+
+        // Notify followers
+        List<UserFollow> followers = userFollowRepository.findByFollowing(user);
+        List<User> followersToNotify = followers.stream().map(UserFollow::getFollower).collect(Collectors.toList());
+        notificationService.sendPushNotifications(followersToNotify, "New Post", user.getName() + " just shared a new post.", "NEW_POST", post.getId());
+
+        return PostResponse.fromEntity(post);
     }
 
     public PostResponse getPost(String postId) {
@@ -143,8 +169,15 @@ public class PostService {
 
         comment = commentRepository.save(comment);
 
-        post.setCommentsCount((post.getCommentsCount() == null ? 0 : post.getCommentsCount()) + 1);
+        post.setCommentsCount(post.getCommentsCount() + 1);
         postRepository.save(post);
+
+        // Send notification to post owner if it's not their own comment
+        if (!post.getUser().getId().equals(authUser.getId())) {
+            String title = "New Comment";
+            String body = authUser.getName() + " commented on your post";
+            notificationService.sendPushNotification(post.getUser(), title, body, "POST_COMMENT", post.getId());
+        }
 
         return CommentResponse.fromEntity(comment);
     }

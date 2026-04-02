@@ -3,6 +3,7 @@ package com.ispilo.controller;
 import com.ispilo.model.dto.request.UpdateProfileRequest;
 import com.ispilo.model.dto.request.UpdateSettingsRequest;
 import com.ispilo.model.dto.response.UserResponse;
+import com.ispilo.model.dto.response.UserProfileResponse;
 import com.ispilo.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -74,9 +75,18 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUserPreferences(userDetails.getUsername(), request));
     }
 
-    @GetMapping("/{userId}/profile")
-    public ResponseEntity<Map<String, Object>> getUserProfile(@PathVariable String userId) {
-        return ResponseEntity.ok(userService.getUserProfile(userId));
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserProfileResponse> getUserProfileById(
+            @PathVariable String userId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(userService.getUserProfileById(userId, userDetails));
+    }
+
+    @PostMapping("/{userId}/follow")
+    public ResponseEntity<Map<String, Object>> toggleFollow(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String userId) {
+        return ResponseEntity.ok(userService.toggleFollow(userDetails.getUsername(), userId));
     }
 
     @DeleteMapping("/me/account")
@@ -91,6 +101,15 @@ public class UserController {
             @Valid @RequestBody com.ispilo.model.dto.request.UpdatePasswordRequest request) {
         userService.updatePassword(userDetails.getUsername(), request);
         return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+    }
+
+    @PostMapping("/fcm-token")
+    public ResponseEntity<Map<String, String>> updateFcmToken(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody Map<String, String> request) {
+        String token = request.get("fcmToken");
+        userService.updateFcmToken(userDetails.getUsername(), token);
+        return ResponseEntity.ok(Map.of("message", "FCM token updated successfully"));
     }
 }
 

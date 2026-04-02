@@ -1,9 +1,14 @@
 package com.ispilo.controller;
 
+import com.ispilo.exception.NotFoundException;
 import com.ispilo.model.dto.request.CreateProductRequest;
 import com.ispilo.model.dto.request.AddReviewRequest;
+import com.ispilo.model.dto.response.MediaUploadResponse;
 import com.ispilo.model.dto.response.PageResponse;
 import com.ispilo.model.dto.response.ProductResponse;
+import com.ispilo.model.entity.User;
+import com.ispilo.repository.UserRepository;
+import com.ispilo.service.MediaService;
 import com.ispilo.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,20 +19,36 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping({"/api/v1/products", "/api/products", "/api/v2/products"})
 @Tag(name = "Products", description = "Marketplace Product APIs")
 @RequiredArgsConstructor
 @Slf4j
 public class ProductController {
 
     private final ProductService productService;
+    private final MediaService mediaService;
+    private final UserRepository userRepository;
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SELLER')")
+    @Operation(summary = "Upload a product image")
+    public ResponseEntity<MediaUploadResponse> uploadProductImage(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        MediaUploadResponse response = mediaService.uploadFile(file, "products", user.getId());
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping
     @Operation(summary = "Get all products with pagination")

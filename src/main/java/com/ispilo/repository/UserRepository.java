@@ -32,4 +32,8 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     @Query("SELECT u FROM User u WHERE u.id != :id ORDER BY u.createdAt DESC")
     org.springframework.data.domain.Page<User> findByIdNotOrderByCreatedAtDesc(@Param("id") String id, org.springframework.data.domain.Pageable pageable);
+
+    // Additional endpoints for followers
+    @Query("SELECT u FROM User u WHERE u.id != :userId AND u.id NOT IN (SELECT f.following.id FROM UserFollow f WHERE f.follower.id = :userId) ORDER BY u.createdAt DESC")
+    Page<User> findUsersNotFollowedBy(@Param("userId") String userId, Pageable pageable);
 }

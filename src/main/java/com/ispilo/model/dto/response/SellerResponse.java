@@ -21,6 +21,8 @@ public class SellerResponse {
     private String businessLogo;
     private String businessAddress;
     private Boolean isVerified;
+    private Double rating;
+    private Integer totalSales;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -33,6 +35,8 @@ public class SellerResponse {
                 .businessLogo(seller.getBusinessLogo())
                 .businessAddress(seller.getBusinessAddress())
                 .isVerified(seller.getIsVerified())
+                .rating(seller.getRating())
+                .totalSales(seller.getTotalSales())
                 .createdAt(seller.getCreatedAt())
                 .updatedAt(seller.getUpdatedAt())
                 .build();
