@@ -183,11 +183,14 @@ public class MessageService {
     private void notifyParticipants(Conversation conversation, MessageResponse message, String senderId) {
         conversation.getParticipants().forEach(participant -> {
             if (!participant.getId().equals(senderId)) {
-                messagingTemplate.convertAndSendToUser(
-                        participant.getId(),
-                        "/queue/messages",
-                        message
-                );
+                String participantEmail = participant.getEmail();
+                if (participantEmail != null && !participantEmail.isBlank()) {
+                    messagingTemplate.convertAndSendToUser(
+                            participantEmail,
+                            "/queue/messages",
+                            message
+                    );
+                }
             }
         });
     }
@@ -195,11 +198,14 @@ public class MessageService {
     private void notifyReadStatus(Conversation conversation, String userId) {
         conversation.getParticipants().forEach(participant -> {
             if (!participant.getId().equals(userId)) {
-                messagingTemplate.convertAndSendToUser(
-                        participant.getId(),
-                        "/queue/read-status",
-                        new ReadStatusNotification(conversation.getId(), userId)
-                );
+                String participantEmail = participant.getEmail();
+                if (participantEmail != null && !participantEmail.isBlank()) {
+                    messagingTemplate.convertAndSendToUser(
+                            participantEmail,
+                            "/queue/read-status",
+                            new ReadStatusNotification(conversation.getId(), userId)
+                    );
+                }
             }
         });
     }

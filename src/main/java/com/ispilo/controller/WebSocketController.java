@@ -4,7 +4,7 @@ import com.ispilo.model.dto.request.CreateConversationRequest;
 import com.ispilo.model.dto.request.SendMessageRequest;
 import com.ispilo.model.dto.response.ConversationResponse;
 import com.ispilo.model.dto.response.MessageResponse;
-import com.ispilo.security.SecurityEncryptionService;
+import com.ispilo.security.UserPrincipal;
 import com.ispilo.service.ConversationService;
 import com.ispilo.service.MessageService;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +16,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Controller;
 
-import java.security.Principal;
-
 @Controller
 @RequiredArgsConstructor
 @Slf4j
@@ -25,7 +23,6 @@ public class WebSocketController {
 
     private final MessageService messageService;
     private final ConversationService conversationService;
-    private final SecurityEncryptionService encryptionService;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -37,14 +34,14 @@ public class WebSocketController {
             @Payload CreateConversationRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
         try {
-            Principal userPrincipal = headerAccessor.getUser();
-            if (userPrincipal == null) {
+            UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+            if (auth == null) {
                 log.error("Unauthorized attempt to create conversation");
                 sendError(headerAccessor, "Unauthorized");
                 return;
             }
 
-            String userId = userPrincipal.getName();
+            String userId = resolveAuthenticatedUserId(auth);
             ConversationResponse response = conversationService.createConversation(userId, request);
 
             // Notify the creator that the conversation is created
@@ -71,14 +68,14 @@ public class WebSocketController {
             @Payload String conversationId,
             SimpMessageHeaderAccessor headerAccessor) {
         try {
-            Principal userPrincipal = headerAccessor.getUser();
-            if (userPrincipal == null) {
+            UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+            if (auth == null) {
                 log.error("Unauthorized attempt to join conversation");
                 sendError(headerAccessor, "Unauthorized");
                 return;
             }
 
-            String userId = userPrincipal.getName();
+            String userId = resolveAuthenticatedUserId(auth);
             // Optional: You can add logic here to verify if the user is a participant
             // of the conversation before allowing them to "join" the topic.
             // For now, we just log it.
@@ -109,29 +106,10 @@ public class WebSocketController {
                 return;
             }
 
-            // Extract user ID from principal (assuming principal is UserDetails or similar)
-            // Adjust this based on your actual UserPrincipal implementation
-            String userId = auth.getName(); 
+            String userId = resolveAuthenticatedUserId(auth);
 
-            // Encrypt message content before saving
-            String encryptedContent = encryptionService.encryptWithAES(
-                    request.getContent(),
-                    request.getEncryptionKey()
-            );
-
-            // Create encrypted request
-            // Since SendMessageRequest is a class with @Data (Lombok), use setters or builder
-            SendMessageRequest encryptedRequest = SendMessageRequest.builder()
-                    .conversationId(request.getConversationId())
-                    .content(encryptedContent)
-                    .mediaUrl(request.getMediaUrl())
-                    .type(request.getType())
-                    .clientMsgId(request.getClientMsgId())
-                    .encryptionKey(request.getEncryptionKey())
-                    .build();
-
-            // Send message through service
-            MessageResponse response = messageService.sendMessage(userId, encryptedRequest);
+        // Send message through service (service layer handles validation + encryption)
+        MessageResponse response = messageService.sendMessage(userId, request);
 
             // Broadcast to conversation participants
             messagingTemplate.convertAndSend(
@@ -159,7 +137,7 @@ public class WebSocketController {
             UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
             if (auth == null) return;
 
-            String userId = auth.getName();
+            String userId = resolveAuthenticatedUserId(auth);
 
             // Broadcast typing indicator to other participants
             messagingTemplate.convertAndSend(
@@ -190,7 +168,7 @@ public class WebSocketController {
             UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
             if (auth == null) return;
 
-            String userId = auth.getName();
+            String userId = resolveAuthenticatedUserId(auth);
 
             // Mark messages as read in database
             messageService.markMessagesAsRead(userId, request.conversationId());
@@ -216,11 +194,22 @@ public class WebSocketController {
      * Send error message to client
      */
     private void sendError(SimpMessageHeaderAccessor headerAccessor, String errorMessage) {
-        messagingTemplate.convertAndSendToUser(
-                headerAccessor.getSessionId(),
-                "/queue/errors",
-                new ErrorMessage(errorMessage, System.currentTimeMillis())
-        );
+        String sessionId = headerAccessor.getSessionId();
+        if (sessionId != null && !sessionId.isBlank()) {
+            messagingTemplate.convertAndSendToUser(
+                    sessionId,
+                    "/queue/errors",
+                    new ErrorMessage(errorMessage, System.currentTimeMillis())
+            );
+        }
+    }
+
+    private String resolveAuthenticatedUserId(UsernamePasswordAuthenticationToken auth) {
+        Object principal = auth.getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
+        }
+        return auth.getName();
     }
 
     // ==================== DTOs ====================
