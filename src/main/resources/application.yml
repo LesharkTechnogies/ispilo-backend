@@ -51,6 +51,16 @@ app:
   encryption:
     master-key: ${ENCRYPTION_MASTER_KEY:}
 
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  sender-email: ${BREVO_SENDER_EMAIL:lesharktechnologies@gmail.com}
+  sender-name: ${BREVO_SENDER_NAME:Ispilo}
+
+forgot-password:
+  code-ttl-minutes: ${FORGOT_PASSWORD_CODE_TTL_MINUTES:15}
+  resend-cooldown-seconds: ${FORGOT_PASSWORD_RESEND_COOLDOWN_SECONDS:60}
+  max-attempts: ${FORGOT_PASSWORD_MAX_ATTEMPTS:5}
+
 management:
   endpoints:
     web:

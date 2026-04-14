@@ -1,11 +1,14 @@
 package com.ispilo.controller;
 
 import com.ispilo.model.dto.request.LoginRequest;
+import com.ispilo.model.dto.request.ForgotPasswordCodeRequest;
 import com.ispilo.model.dto.request.RefreshTokenRequest;
 import com.ispilo.model.dto.request.RegisterRequest;
+import com.ispilo.model.dto.request.ResetPasswordWithCodeRequest;
 import com.ispilo.model.dto.response.AuthResponse;
 import com.ispilo.model.dto.response.RefreshTokenResponse;
 import com.ispilo.service.AuthService;
+import com.ispilo.service.ForgotPasswordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final ForgotPasswordService forgotPasswordService;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
@@ -43,5 +47,32 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
+    }
+
+    @PostMapping("/forgot-password/request-code")
+    public ResponseEntity<Map<String, Object>> requestForgotPasswordCode(@Valid @RequestBody ForgotPasswordCodeRequest request) {
+        forgotPasswordService.requestCode(request.getEmail(), false);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "If the email exists, a verification code has been sent"
+        ));
+    }
+
+    @PostMapping("/forgot-password/resend-code")
+    public ResponseEntity<Map<String, Object>> resendForgotPasswordCode(@Valid @RequestBody ForgotPasswordCodeRequest request) {
+        forgotPasswordService.requestCode(request.getEmail(), true);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "If the email exists, a verification code has been sent"
+        ));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<Map<String, Object>> resetPasswordWithCode(@Valid @RequestBody ResetPasswordWithCodeRequest request) {
+        forgotPasswordService.resetPassword(request);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Password updated successfully"
+        ));
     }
 }
