@@ -61,9 +61,14 @@ public class Message {
     private String encryptionIv; // Initialization Vector for GCM mode
 
     @Column(name = "media_url")
-    private String mediaUrl;
+    private String mediaUrl;   
 
-    @Column(name = "is_read")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    @Builder.Default
+    private com.ispilo.model.enums.MessageStatus status = com.ispilo.model.enums.MessageStatus.PENDING;
+
+    @Column(name = "is_read")  
     @Builder.Default
     private Boolean isRead = false;
 

@@ -44,10 +44,11 @@ public class ForgotPasswordService {
         String normalizedEmail = normalizeEmail(email);
         User user = userRepository.findByEmail(normalizedEmail).orElse(null);
 
-        // Do not reveal account existence
+        // Reject account existence if not found to prevent sending unknown email codes silently.
+        // Actually, the user specifically requested to reject if the email is not registered.
         if (user == null) {
             log.info("Password reset requested for unknown email: {}", normalizedEmail);
-            return;
+            throw new BadRequestException("User with this email is not registered.");
         }
 
         if (resend) {

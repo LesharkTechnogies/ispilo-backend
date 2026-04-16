@@ -22,6 +22,11 @@ public interface MessageRepository extends JpaRepository<Message, String> {
 
     long countByConversationIdAndIsReadFalse(String conversationId);
 
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.conversation.id = :conversationId AND m.isRead = false AND m.sender.id != :userId")
+    long countUnreadMessagesByConversationAndUser(@Param("conversationId") String conversationId, @Param("userId") String userId);
+
+    List<Message> findByConversationIdAndStatusNotAndSenderIdNot(String conversationId, com.ispilo.model.enums.MessageStatus status, String senderId);
+
     @Query("SELECT m FROM Message m WHERE m.conversation.id = :conversationId AND m.isRead = false AND m.sender.id != :userId")
     List<Message> findUnreadMessagesByConversationAndNotSender(
             @Param("conversationId") String conversationId,

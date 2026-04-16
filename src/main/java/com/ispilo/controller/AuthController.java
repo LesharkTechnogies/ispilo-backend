@@ -54,7 +54,7 @@ public class AuthController {
         forgotPasswordService.requestCode(request.getEmail(), false);
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "If the email exists, a verification code has been sent"
+                "message", "Verification code sent"
         ));
     }
 
@@ -63,7 +63,7 @@ public class AuthController {
         forgotPasswordService.requestCode(request.getEmail(), true);
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "If the email exists, a verification code has been sent"
+                "message", "Verification code sent"
         ));
     }
 

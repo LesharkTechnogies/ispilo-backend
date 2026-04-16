@@ -22,6 +22,7 @@ public class ConversationResponse {
     private List<UserResponse> participants;
     private String lastMessage;
     private LocalDateTime lastMessageAt;
+    private Long unreadCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

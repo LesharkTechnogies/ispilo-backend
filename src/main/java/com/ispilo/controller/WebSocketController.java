@@ -75,10 +75,21 @@ public class WebSocketController {
                 return;
             }
 
-            String userId = resolveAuthenticatedUserId(auth);
-            // Optional: You can add logic here to verify if the user is a participant
+            String userId = resolveAuthenticatedUserId(auth); 
+            // Optional: You can add logic here to verify if the user is a participant       
             // of the conversation before allowing them to "join" the topic.
             // For now, we just log it.
+
+            // Fetch and send all messages that are stuck in SENT state to ensure synchronization
+            var undelivered = messageService.getUndeliveredMessages(userId, conversationId);
+            if (!undelivered.isEmpty()) {
+                messagingTemplate.convertAndSendToUser(
+                        userId,
+                        "/queue/messages.sync",
+                        undelivered
+                );
+                log.info("Synced {} undelivered messages to user {}", undelivered.size(), userId);
+            }
 
             log.info("User {} joined conversation {}", userId, conversationId);
 
@@ -161,9 +172,9 @@ public class WebSocketController {
      * Path: /app/chat.read
      */
     @MessageMapping("/chat.read")
-    public void markAsRead(
+    public void markAsRead(    
             @Payload ReadReceiptRequest request,
-            SimpMessageHeaderAccessor headerAccessor) {
+            SimpMessageHeaderAccessor headerAccessor) {       
         try {
             UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
             if (auth == null) return;
@@ -186,7 +197,30 @@ public class WebSocketController {
             log.debug("Messages marked as read: {}", request.conversationId());
 
         } catch (Exception e) {
-            log.error("Error marking messages as read", e);
+            log.error("Error marking messages as read", e);   
+        }
+    }
+
+    /**
+     * Mark a specific message as delivered
+     * Path: /app/chat.delivered
+     */
+    @MessageMapping("/chat.delivered")
+    public void markAsDelivered(
+            @Payload DeliveryReceiptRequest request,
+            SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+            if (auth == null) return;
+
+            String userId = resolveAuthenticatedUserId(auth);
+
+            messageService.markMessageAsDelivered(userId, request.messageId());
+
+            log.debug("Message {} marked as delivered by {}", request.messageId(), userId);
+
+        } catch (Exception e) {
+            log.error("Error marking message as delivered", e);
         }
     }
 
@@ -220,17 +254,21 @@ public class WebSocketController {
     ) {}
 
     public record TypingIndicator(
-            String userId,
-            String username,
-            boolean isTyping
+            String userId,     
+            String username,   
+            boolean isTyping   
     ) {}
 
     public record ReadReceiptRequest(
             String conversationId
     ) {}
 
-    public record ReadReceipt(
-            String userId,
+    public record DeliveryReceiptRequest(
+            String messageId
+    ) {}
+
+    public record ReadReceipt( 
+            String userId,     
             String conversationId,
             long timestamp
     ) {}

@@ -25,6 +25,7 @@ public class MessageResponse {
     private String content;
     private String mediaUrl;
     private Boolean isRead;
+    private com.ispilo.model.enums.MessageStatus status;
     private LocalDateTime createdAt;
 
     public static MessageResponse fromEntity(Message message) {
@@ -39,6 +40,7 @@ public class MessageResponse {
                 .content(message.getContent())
                 .mediaUrl(message.getMediaUrl())
                 .isRead(message.getIsRead())
+                .status(message.getStatus())
                 .createdAt(message.getCreatedAt())
                 .build();
     }

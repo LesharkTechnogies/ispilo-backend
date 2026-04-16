@@ -9,6 +9,7 @@ import com.ispilo.model.entity.Conversation;
 import com.ispilo.model.entity.User;
 import com.ispilo.model.enums.ConversationType;
 import com.ispilo.repository.ConversationRepository;
+import com.ispilo.repository.MessageRepository;
 import com.ispilo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class ConversationService {
 
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
 
     @Transactional
     public ConversationResponse createConversation(String userId, CreateConversationRequest request) {
@@ -99,13 +101,18 @@ public class ConversationService {
                 Sort.by("lastMessageAt").descending());
 
         Page<Conversation> conversations = conversationRepository
-                .findByParticipantsId(userId, pageable);
+                .findByParticipantsId(userId, pageable);      
 
-        return conversations.map(ConversationResponse::fromEntity);
+        return conversations.map(conversation -> {
+            ConversationResponse response = ConversationResponse.fromEntity(conversation);
+            long unreadCount = messageRepository.countUnreadMessagesByConversationAndUser(conversation.getId(), userId);
+            response.setUnreadCount(unreadCount);
+            return response;
+        });
     }
 
     @Transactional(readOnly = true)
-    public ConversationResponse getConversation(String userId, String conversationId) {
+    public ConversationResponse getConversation(String userId, String conversationId) {      
         log.debug("Getting conversation {} for user {}", conversationId, userId);
 
         Conversation conversation = conversationRepository.findById(conversationId)
@@ -115,11 +122,14 @@ public class ConversationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        if (!conversation.getParticipants().contains(user)) {
+        if (!conversation.getParticipants().contains(user)) { 
             throw new UnauthorizedException("User is not a participant in this conversation");
         }
 
-        return ConversationResponse.fromEntity(conversation);
+        ConversationResponse response = ConversationResponse.fromEntity(conversation);
+        long unreadCount = messageRepository.countUnreadMessagesByConversationAndUser(conversationId, userId);
+        response.setUnreadCount(unreadCount);
+        return response;
     }
 
     @Transactional

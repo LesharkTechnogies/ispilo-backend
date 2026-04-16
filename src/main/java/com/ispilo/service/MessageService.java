@@ -81,16 +81,17 @@ public class MessageService {
             encryptedContent = encryptionService.encryptWithAES(request.getContent(), conversationKey);
         }
 
-        // Create message
+        // Create message      
         Message message = Message.builder()
-                .clientMsgId(request.getClientMsgId())
+                .clientMsgId(request.getClientMsgId())        
                 .conversation(conversation)
                 .sender(sender)
                 .type(request.getType())
                 .content(encryptedContent)
                 .mediaUrl(request.getMediaUrl())
-                .isRead(false)
-                .build();
+                .isRead(false) 
+                .status(com.ispilo.model.enums.MessageStatus.SENT)
+                .build();      
 
         message = messageRepository.save(message);
 
@@ -156,13 +157,48 @@ public class MessageService {
             throw new UnauthorizedException("User is not a participant in this conversation");
         }
 
-        List<Message> unreadMessages = messageRepository
-                .findUnreadMessagesByConversationAndNotSender(conversationId, userId);
+        List<Message> unreadMessages = messageRepository      
+                .findUnreadMessagesByConversationAndNotSender(conversationId, userId);      
 
-        unreadMessages.forEach(message -> message.setIsRead(true));
+        unreadMessages.forEach(message -> {
+            message.setIsRead(true);
+            message.setStatus(com.ispilo.model.enums.MessageStatus.READ);
+            message.setReadAt(LocalDateTime.now());
+        });
         messageRepository.saveAll(unreadMessages);
 
         notifyReadStatus(conversation, userId);
+    }
+
+    @Transactional
+    public void markMessageAsDelivered(String userId, String messageId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new NotFoundException("Message not found"));
+
+        if (message.getStatus() == com.ispilo.model.enums.MessageStatus.SENT) {
+            message.setStatus(com.ispilo.model.enums.MessageStatus.DELIVERED);
+            messageRepository.save(message);
+
+            // Notify original sender that their message was delivered
+            String senderEmail = message.getSender().getEmail();
+            if (senderEmail != null && !senderEmail.isBlank()) {
+                messagingTemplate.convertAndSendToUser(
+                        senderEmail,
+                        "/queue/message-delivered",
+                        new DeliveryReceipt(message.getId(), message.getConversation().getId(), System.currentTimeMillis())
+                );
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageResponse> getUndeliveredMessages(String userId, String conversationId) {
+        return messageRepository.findByConversationIdAndStatusNotAndSenderIdNot(
+                conversationId, com.ispilo.model.enums.MessageStatus.READ, userId)
+                .stream()
+                .filter(m -> m.getStatus() == com.ispilo.model.enums.MessageStatus.SENT)
+                .map(MessageResponse::fromEntity)
+                .toList();
     }
 
     @Transactional
@@ -211,4 +247,6 @@ public class MessageService {
     }
 
     private record ReadStatusNotification(String conversationId, String userId) {}
+    
+    public record DeliveryReceipt(String messageId, String conversationId, long timestamp) {}
 }
