@@ -17,6 +17,8 @@ import java.util.Set;
 @Entity
 @Table(name = "conversations")
 @Data
+@EqualsAndHashCode(exclude = {"participants", "messages"})
+@ToString(exclude = {"participants", "messages"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

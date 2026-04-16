@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
     @Index(name = "idx_is_read", columnList = "is_read")
 })
 @Data
+@EqualsAndHashCode(exclude = {"conversation", "sender", "replyToMessage"})
+@ToString(exclude = {"conversation", "sender", "replyToMessage"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

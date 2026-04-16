@@ -18,6 +18,8 @@ import java.util.List;
     @Index(name = "idx_created_at", columnList = "created_at")
 })
 @Data
+@EqualsAndHashCode(exclude = {"posts", "comments"})
+@ToString(exclude = {"posts", "comments"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
