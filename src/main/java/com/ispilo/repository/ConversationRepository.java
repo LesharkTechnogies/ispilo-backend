@@ -17,6 +17,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Stri
 
     Page<Conversation> findByParticipantsId(String userId, Pageable pageable);
 
-    @Query("SELECT c FROM Conversation c JOIN c.participants p1 JOIN c.participants p2 WHERE c.type = com.ispilo.model.enums.ConversationType.DIRECT AND p1.id = :userId1 AND p2.id = :userId2")
-    Conversation findDirectConversationBetweenUsers(@Param("userId1") String userId1, @Param("userId2") String userId2);
+    @Query("SELECT c FROM Conversation c JOIN c.participants p1 JOIN c.participants p2 WHERE c.type = com.ispilo.model.enums.ConversationType.DIRECT AND p1.id = :userId1 AND p2.id = :userId2 AND SIZE(c.participants) = 2")
+    List<Conversation> findDirectConversationBetweenUsers(@Param("userId1") String userId1, @Param("userId2") String userId2);
+
+    @Query("SELECT c FROM Conversation c JOIN c.participants p WHERE c.type = com.ispilo.model.enums.ConversationType.DIRECT AND p.id = :userId AND SIZE(c.participants) = 1")
+    List<Conversation> findSelfDirectConversation(@Param("userId") String userId);
 }

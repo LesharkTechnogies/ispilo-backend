@@ -57,20 +57,26 @@ public class ConversationService {
             participants.add(participant);
         }
 
-        // For direct conversations, ensure only 2 participants
-        if (request.getType() == ConversationType.DIRECT && participants.size() != 2) {
-            throw new BadRequestException("Direct conversation must have exactly 2 participants");
+        // For direct conversations, ensure 1 or 2 participants
+        if (request.getType() == ConversationType.DIRECT && participants.size() > 2) {
+            throw new BadRequestException("Direct conversation cannot have more than 2 participants");
         }
 
         // Check if direct conversation already exists
         if (request.getType() == ConversationType.DIRECT) {
             List<User> participantList = participants.stream().toList();
-            Conversation existing = conversationRepository
-                    .findDirectConversationBetweenUsers(participantList.get(0).getId(),
-                                                       participantList.get(1).getId());
-            if (existing != null) {
-                log.debug("Direct conversation already exists: {}", existing.getId());
-                return ConversationResponse.fromEntity(existing);
+            List<Conversation> existing;
+            
+            if (participantList.size() == 1) {
+                existing = conversationRepository.findSelfDirectConversation(participantList.get(0).getId());
+            } else {
+                existing = conversationRepository.findDirectConversationBetweenUsers(
+                        participantList.get(0).getId(), participantList.get(1).getId());
+            }
+            
+            if (!existing.isEmpty()) {
+                log.debug("Direct conversation already exists: {}", existing.get(0).getId());
+                return ConversationResponse.fromEntity(existing.get(0));
             }
         }
 
@@ -164,17 +170,20 @@ public class ConversationService {
     public ConversationResponse getOrCreateDirectConversation(String userId, String otherUserId) {
         log.debug("Getting or creating direct conversation between {} and {}", userId, otherUserId);
 
-        if (userId.equals(otherUserId)) {
-            throw new BadRequestException("Cannot create conversation with yourself");
-        }
+        // Allow users to message themselves (Note to self feature)
+        // By skipping this exception.
 
         // Check if conversation exists
-        Conversation existing = conversationRepository
-                .findDirectConversationBetweenUsers(userId, otherUserId);
+        List<Conversation> existing;
+        if (userId.equals(otherUserId)) {
+            existing = conversationRepository.findSelfDirectConversation(userId);
+        } else {
+            existing = conversationRepository.findDirectConversationBetweenUsers(userId, otherUserId);
+        }
 
-        if (existing != null) {
-            log.debug("Direct conversation exists: {}", existing.getId());
-            return ConversationResponse.fromEntity(existing);
+        if (!existing.isEmpty()) {
+            log.debug("Direct conversation exists: {}", existing.get(0).getId());
+            return ConversationResponse.fromEntity(existing.get(0));
         }
 
         // Create new conversation

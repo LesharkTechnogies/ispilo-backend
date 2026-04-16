@@ -17,7 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/conversations")
+@RequestMapping({"/api/v1/conversations", "/api/conversations", "/api/v2/conversations"})
 @RequiredArgsConstructor
 @Slf4j
 public class ConversationController {
@@ -163,6 +163,28 @@ public class ConversationController {
 
         ConversationResponse response = conversationService.getOrCreateDirectConversation(
                 userPrincipal.getId(), otherUserId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get or create direct conversation with another user via query param 
+     */
+    @GetMapping("/direct")
+    public ResponseEntity<ConversationResponse> getOrCreateDirectConversationParam(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam(required = false) String participantId,
+            @RequestParam(required = false) String userId) {
+
+        String targetId = participantId != null ? participantId : userId;
+        if (targetId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        log.info("Getting/creating direct conversation via param between {} and {}",
+                userPrincipal.getId(), targetId);
+
+        ConversationResponse response = conversationService.getOrCreateDirectConversation(
+                userPrincipal.getId(), targetId);
         return ResponseEntity.ok(response);
     }
 }
