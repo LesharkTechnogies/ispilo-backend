@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +25,7 @@ public class ConversationController {
 
     private final ConversationService conversationService;
     private final MessageService messageService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * Send a message to a conversation via REST
@@ -68,6 +70,13 @@ public class ConversationController {
         request.setClientMsgId(clientMsgId);
 
         MessageResponse response = messageService.sendMessage(userPrincipal.getId(), request);
+
+        // Broadcast to conversation participants via STOMP so the UI updates instantly
+        messagingTemplate.convertAndSend(
+                "/topic/conversation/" + request.getConversationId(),
+                response
+        );
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -91,17 +100,30 @@ public class ConversationController {
     @GetMapping
     public ResponseEntity<?> getUserConversations(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam(required = false) String participantId,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String sellerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        String targetId = userId != null ? userId : sellerId;
+        // The frontend might send ?userId=<my-id>&sellerId=<other-id>
+        // We must find the ID that belongs to the OTHER person.
+        String targetId = null;
+        String myId = userPrincipal.getId();
+
+        if (participantId != null && !participantId.equals(myId)) {
+            targetId = participantId;
+        } else if (sellerId != null && !sellerId.equals(myId)) {
+            targetId = sellerId;
+        } else if (userId != null && !userId.equals(myId)) {
+            targetId = userId;
+        }
+
         if (targetId != null) {
             log.info("Getting/creating direct conversation via param between {} and {}",
-                    userPrincipal.getId(), targetId);
+                    myId, targetId);
             ConversationResponse response = conversationService.getOrCreateDirectConversation(
-                    userPrincipal.getId(), targetId);
+                    myId, targetId);
             return ResponseEntity.ok(response);
         }
 
@@ -167,6 +189,7 @@ public class ConversationController {
      * Mark messages as read
      */
     @PutMapping("/{conversationId}/read")
+    @PostMapping("/{conversationId}/read")
     public ResponseEntity<Void> markAsRead(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable String conversationId) {
