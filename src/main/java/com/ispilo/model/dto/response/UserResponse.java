@@ -31,6 +31,8 @@ public class UserResponse {
     private Boolean isPhoneVerified;
     private String bio;
     private String location;
+    private Boolean isOnline;
+    private LocalDateTime lastSeenAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean isFollowing; // Added to check if current user follows this user
@@ -56,6 +58,8 @@ public class UserResponse {
                 .isPhoneVerified(user.getIsPhoneVerified())
                 .bio(user.getBio())
                 .location(user.getLocation())
+                .isOnline(user.getIsOnline())
+                .lastSeenAt(user.getLastSeenAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .isFollowing(false) // Default value, will be updated by services if needed

@@ -61,15 +61,19 @@ public class MessageService {
             throw new UnauthorizedException("User is not a participant in this conversation");
         }
 
-        // Validate message content
-        if (request.getType() == MessageType.TEXT &&
-            (request.getContent() == null || request.getContent().trim().isEmpty())) {
-            throw new BadRequestException("Text message content cannot be empty");
+        Message replyTo = null;
+        if (request.getReplyToMessageId() != null) {
+            replyTo = messageRepository.findById(request.getReplyToMessageId()).orElse(null);
         }
 
-        // Encrypt message content if it's text
-        String encryptedContent = null;
-        if (request.getContent() != null && !request.getContent().trim().isEmpty()) {
+        String encryptedContent = request.getContent();
+        if (request.getContent() != null) {
+            // Encrypt message content if it's text
+            if (request.getType() == MessageType.TEXT &&
+                (request.getContent() == null || request.getContent().trim().isEmpty())) {
+                throw new BadRequestException("Text message content cannot be empty");
+            }
+
             String conversationKey = conversation.getEncryptionKey();
             if (conversationKey == null) {
                 // Generate a new AES key if one doesn't exist for the conversation
@@ -81,17 +85,18 @@ public class MessageService {
             encryptedContent = encryptionService.encryptWithAES(request.getContent(), conversationKey);
         }
 
-        // Create message      
+        // Create message
         Message message = Message.builder()
-                .clientMsgId(request.getClientMsgId())        
+                .clientMsgId(request.getClientMsgId())
                 .conversation(conversation)
                 .sender(sender)
                 .type(request.getType())
                 .content(encryptedContent)
                 .mediaUrl(request.getMediaUrl())
-                .isRead(false) 
+                .isRead(false)
+                .replyToMessage(replyTo)
                 .status(com.ispilo.model.enums.MessageStatus.SENT)
-                .build();      
+                .build();
 
         message = messageRepository.save(message);
 
@@ -211,9 +216,36 @@ public class MessageService {
         }
 
         messageRepository.delete(message);
-        
-        // Update conversation last message if needed (simplified logic)
-        // In a real app, you'd find the new last message
+    }
+
+    @Transactional
+    public MessageResponse reactToMessage(String userId, String messageId, String emoji) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new NotFoundException("Message not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        if (!message.getConversation().getParticipants().contains(user)) {
+            throw new UnauthorizedException("User is not a participant in this conversation");
+        }
+
+        if (emoji == null || emoji.isEmpty()) {
+            message.getReactions().remove(userId);
+        } else {
+            message.getReactions().put(userId, emoji);
+        }
+
+        Message saved = messageRepository.save(message);
+
+        MessageResponse response = MessageResponse.fromEntity(saved);
+
+        messagingTemplate.convertAndSend(
+                "/topic/conversation/" + message.getConversation().getId() + "/react",
+                response
+        );
+
+        return response;
     }
 
     private void notifyParticipants(Conversation conversation, MessageResponse message, String senderId) {

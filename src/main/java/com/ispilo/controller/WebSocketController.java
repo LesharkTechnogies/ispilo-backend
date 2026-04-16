@@ -225,6 +225,28 @@ public class WebSocketController {
     }
 
     /**
+     * React to a specific message
+     * Path: /app/chat.react
+     */
+    @MessageMapping("/chat.react")
+    public void reactToMessage(
+            @Payload ReactRequest request,
+            SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+            if (auth == null) return;
+
+            String userId = resolveAuthenticatedUserId(auth);
+
+            messageService.reactToMessage(userId, request.messageId(), request.emoji());
+            log.debug("Message {} reacted to with {} by {}", request.messageId(), request.emoji(), userId);
+
+        } catch (Exception e) {
+            log.error("Error reacting to message", e);
+        }
+    }
+
+    /**
      * Send error message to client
      */
     private void sendError(SimpMessageHeaderAccessor headerAccessor, String errorMessage) {
@@ -268,9 +290,14 @@ public class WebSocketController {
     ) {}
 
     public record ReadReceipt( 
-            String userId,     
+            String userId,
             String conversationId,
             long timestamp
+    ) {}
+
+    public record ReactRequest(
+            String messageId,
+            String emoji
     ) {}
 
     public record ErrorMessage(

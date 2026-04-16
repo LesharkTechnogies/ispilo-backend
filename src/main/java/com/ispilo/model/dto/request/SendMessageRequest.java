@@ -31,4 +31,6 @@ public class SendMessageRequest {
     private String clientMsgId;
 
     private String encryptionKey;
+
+    private String replyToMessageId; // Support for replying to a specific message
 }

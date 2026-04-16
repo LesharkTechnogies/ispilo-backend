@@ -89,6 +89,15 @@ public class User {
     @Column(name = "fcm_token")
     private String fcmToken;
 
+    @Column(name = "reset_password_expires_at")
+    private LocalDateTime resetPasswordExpiresAt;
+
+    @Column(name = "is_online")
+    private Boolean isOnline = false;
+
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Post> posts = new ArrayList<>();

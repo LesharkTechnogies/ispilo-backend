@@ -26,6 +26,8 @@ public class MessageResponse {
     private String mediaUrl;
     private Boolean isRead;
     private com.ispilo.model.enums.MessageStatus status;
+    private String replyToMessageId;
+    private java.util.Map<String, String> reactions;
     private LocalDateTime createdAt;
 
     public static MessageResponse fromEntity(Message message) {
@@ -41,6 +43,8 @@ public class MessageResponse {
                 .mediaUrl(message.getMediaUrl())
                 .isRead(message.getIsRead())
                 .status(message.getStatus())
+                .replyToMessageId(message.getReplyToMessage() != null ? message.getReplyToMessage().getId() : null)
+                .reactions(message.getReactions() != null ? new java.util.HashMap<>(message.getReactions()) : new java.util.HashMap<>())
                 .createdAt(message.getCreatedAt())
                 .build();
     }

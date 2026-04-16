@@ -61,7 +61,18 @@ public class Message {
     private String encryptionIv; // Initialization Vector for GCM mode
 
     @Column(name = "media_url")
-    private String mediaUrl;   
+    private String mediaUrl;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_message_id")
+    private Message replyToMessage;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "message_reactions", joinColumns = @JoinColumn(name = "message_id"))
+    @MapKeyColumn(name = "user_id")
+    @Column(name = "emoji")
+    @Builder.Default
+    private java.util.Map<String, String> reactions = new java.util.HashMap<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")

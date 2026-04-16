@@ -33,4 +33,13 @@ public class MessageController {
         messageService.markMessagesAsRead(userPrincipal.getId(), conversationId);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{messageId}/react")
+    public ResponseEntity<MessageResponse> reactToMessage(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable String messageId,
+            @RequestBody java.util.Map<String, String> payload) {
+        String emoji = payload.get("emoji");
+        return ResponseEntity.ok(messageService.reactToMessage(userPrincipal.getId(), messageId, emoji));
+    }
 }
