@@ -161,10 +161,17 @@ public class PostService {
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
 
+        Comment parentComment = null;
+        if (request.getParentCommentId() != null && !request.getParentCommentId().isEmpty()) {
+            parentComment = commentRepository.findById(request.getParentCommentId())
+                    .orElseThrow(() -> new NotFoundException("Parent comment not found"));
+        }
+
         Comment comment = Comment.builder()
                 .post(post)
                 .user(authUser)
                 .content(request.getContent())
+                .parentComment(parentComment)
                 .build();
 
         comment = commentRepository.save(comment);
@@ -186,7 +193,8 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        Page<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtDesc(postId, pageable);
+        // Only fetch top-level comments; replies will be loaded eagerly/lazily via DTO mapper.
+        Page<Comment> comments = commentRepository.findByPostIdAndParentCommentIsNullOrderByCreatedAtDesc(postId, pageable);
         return comments.map(CommentResponse::fromEntity);
     }
 }

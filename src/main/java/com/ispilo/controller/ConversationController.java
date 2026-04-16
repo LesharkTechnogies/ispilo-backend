@@ -26,6 +26,52 @@ public class ConversationController {
     private final MessageService messageService;
 
     /**
+     * Send a message to a conversation via REST
+     */
+    @PostMapping("/{conversationId}/messages")
+    public ResponseEntity<MessageResponse> sendMessage(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable String conversationId,
+            @RequestBody java.util.Map<String, Object> payload) {
+
+        log.info("Sending message via REST to conversation {} by user {}",
+                conversationId, userPrincipal.getId());
+
+        com.ispilo.model.dto.request.SendMessageRequest request = new com.ispilo.model.dto.request.SendMessageRequest();
+        request.setConversationId(conversationId);
+        
+        // Handle varying message types
+        String typeStr = (String) payload.getOrDefault("type", "TEXT");
+        try {
+            request.setType(com.ispilo.model.enums.MessageType.valueOf(typeStr.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            request.setType(com.ispilo.model.enums.MessageType.TEXT);
+        }
+
+        // Handle varying text/content fields
+        if (payload.containsKey("text")) {
+            request.setContent((String) payload.get("text"));
+        } else if (payload.containsKey("content")) {
+            request.setContent((String) payload.get("content"));
+        } else if (payload.containsKey("payload")) {
+            java.util.Map<String, Object> nested = (java.util.Map<String, Object>) payload.get("payload");
+            if (nested != null && nested.containsKey("text")) {
+                request.setContent((String) nested.get("text"));
+            }
+        }
+
+        // Auto-generate client Msg ID if not present
+        String clientMsgId = (String) payload.get("clientMsgId");
+        if (clientMsgId == null || clientMsgId.isEmpty()) {
+            clientMsgId = java.util.UUID.randomUUID().toString();
+        }
+        request.setClientMsgId(clientMsgId);
+
+        MessageResponse response = messageService.sendMessage(userPrincipal.getId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
      * Create a new conversation
      */
     @PostMapping
@@ -43,10 +89,21 @@ public class ConversationController {
      * Get all conversations for current user (paginated)
      */
     @GetMapping
-    public ResponseEntity<PageResponse<ConversationResponse>> getUserConversations(
+    public ResponseEntity<?> getUserConversations(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String sellerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+
+        String targetId = userId != null ? userId : sellerId;
+        if (targetId != null) {
+            log.info("Getting/creating direct conversation via param between {} and {}",
+                    userPrincipal.getId(), targetId);
+            ConversationResponse response = conversationService.getOrCreateDirectConversation(
+                    userPrincipal.getId(), targetId);
+            return ResponseEntity.ok(response);
+        }
 
         log.info("Getting conversations for user {}", userPrincipal.getId());
         Page<ConversationResponse> conversations = conversationService.getUserConversations(

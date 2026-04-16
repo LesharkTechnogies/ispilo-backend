@@ -14,5 +14,7 @@ public class CreateCommentRequest {
 
     @NotBlank(message = "Content is required")
     private String content;
+
+    private String parentCommentId;
 }
 

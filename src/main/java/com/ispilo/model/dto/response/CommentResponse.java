@@ -18,6 +18,8 @@ public class CommentResponse {
     private String postId;
     private UserResponse user;
     private String content;
+    private String parentCommentId;
+    private java.util.List<CommentResponse> replies;
     private LocalDateTime createdAt;
 
     public static CommentResponse fromEntity(Comment comment) {
@@ -26,6 +28,8 @@ public class CommentResponse {
                 .postId(comment.getPost().getId())
                 .user(UserResponse.fromEntity(comment.getUser()))
                 .content(comment.getContent())
+                .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
+                .replies(comment.getReplies() != null ? comment.getReplies().stream().map(CommentResponse::fromEntity).collect(java.util.stream.Collectors.toList()) : new java.util.ArrayList<>())
                 .createdAt(comment.getCreatedAt())
                 .build();
     }
