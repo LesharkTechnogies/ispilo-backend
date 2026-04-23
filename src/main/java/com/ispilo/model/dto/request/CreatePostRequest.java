@@ -19,6 +19,10 @@ public class CreatePostRequest {
     private String imageUrl; // single image preview
     private List<String> mediaUrls;
     
+    // Group related fields
+    private String groupId;
+    private Boolean isAnonymous;
+    
     // helper to get the actual text regardless of what frontend sends
     public String getActualContent() {
         if (content != null && !content.isEmpty()) return content;

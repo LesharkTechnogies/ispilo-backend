@@ -1,11 +1,14 @@
 package com.ispilo.service;
 
+import com.ispilo.model.dto.response.GroupResponse;
 import com.ispilo.model.dto.response.PersonResponse;
 import com.ispilo.model.dto.response.PostResponse;
 import com.ispilo.model.dto.response.SearchResponse;
 import com.ispilo.model.dto.response.TypeaheadResponse;
+import com.ispilo.model.entity.GroupEntity;
 import com.ispilo.model.entity.Post;
 import com.ispilo.model.entity.User;
+import com.ispilo.repository.GroupRepository;
 import com.ispilo.repository.PostRepository;
 import com.ispilo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,8 @@ public class SearchService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
+    private final GroupService groupService;
 
     public SearchResponse<PostResponse> searchPosts(String query, Pageable pageable) {
         Page<Post> posts = postRepository.searchPosts(query, pageable);
@@ -34,14 +39,21 @@ public class SearchService {
         return SearchResponse.of(users.map(this::convertToPersonResponse));
     }
 
+    public SearchResponse<GroupResponse> searchGroups(String query, Pageable pageable) {
+        Page<GroupEntity> groups = groupRepository.searchGroups(query, pageable);
+        return SearchResponse.of(groups.map(groupService::toGroupResponse));
+    }
+
     public TypeaheadResponse typeaheadSearch(String query, int limit) {
         String likeQuery = "%" + query + "%";
         List<String> postSuggestions = postRepository.findTypeaheadSuggestions(likeQuery, limit);
         List<String> userSuggestions = userRepository.findTypeaheadSuggestions(likeQuery, limit);
+        List<String> groupSuggestions = groupRepository.findTypeaheadSuggestions(likeQuery, limit);
 
         List<TypeaheadResponse.TypeaheadItem> items = new ArrayList<>();
         postSuggestions.forEach(s -> items.add(new TypeaheadResponse.TypeaheadItem("post", s)));
         userSuggestions.forEach(s -> items.add(new TypeaheadResponse.TypeaheadItem("user", s)));
+        groupSuggestions.forEach(s -> items.add(new TypeaheadResponse.TypeaheadItem("group", s)));
 
         return TypeaheadResponse.builder()
                 .query(query)

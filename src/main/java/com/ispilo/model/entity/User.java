@@ -83,6 +83,10 @@ public class User {
     @Builder.Default
     private Boolean profilePublic = false;
 
+    @Column(name = "is_admin")
+    @Builder.Default
+    private Boolean isAdmin = false;
+
     @Column(length = 500)
     private String bio;
 
@@ -95,6 +99,7 @@ public class User {
     private LocalDateTime resetPasswordExpiresAt;
 
     @Column(name = "is_online")
+    @Builder.Default
     private Boolean isOnline = false;
 
     @Column(name = "last_seen_at")

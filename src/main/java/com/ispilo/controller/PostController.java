@@ -2,6 +2,7 @@ package com.ispilo.controller;
 
 import com.ispilo.model.dto.response.PostResponse;
 import com.ispilo.service.FeedService;
+import com.ispilo.service.PostService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
 
     private final FeedService feedService;
-    private final com.ispilo.service.PostService postService;
+    private final PostService postService;
 
     @PostMapping("/{postId}/like")
     public ResponseEntity<PostResponse> toggleLike(

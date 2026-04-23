@@ -23,7 +23,6 @@ public record CreateProductRequest(
 
     Integer stockQuantity,
 
-    @NotBlank(message = "Main image is required")
     @URL(message = "Main image must be a valid URL")
     String mainImage,
 
@@ -31,5 +30,6 @@ public record CreateProductRequest(
     
     String category,
     String condition,
-    String location
+    String location,
+    String sellerId
 ) {}

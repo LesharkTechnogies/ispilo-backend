@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -87,6 +88,21 @@ public class UserController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String userId) {
         return ResponseEntity.ok(userService.toggleFollow(userDetails.getUsername(), userId));
+    }
+
+    @GetMapping("/{userId}/followers")
+    public ResponseEntity<List<UserResponse>> getFollowers(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getFollowers(userId));
+    }
+
+    @GetMapping("/{userId}/following")
+    public ResponseEntity<List<UserResponse>> getFollowing(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getFollowing(userId));
+    }
+
+    @GetMapping("/{userId}/connections")
+    public ResponseEntity<List<UserResponse>> getConnections(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getConnections(userId));
     }
 
     @DeleteMapping("/me/account")

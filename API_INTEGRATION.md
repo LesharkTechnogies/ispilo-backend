@@ -15,7 +15,7 @@ Base URL and Versioning
 
 - Base URL: https://ispilo-backend-32613e7af752.herokuapp.com
 - Versioning: All production endpoints are versioned under `/v1/` (e.g. `/v1/products/:id`). Breaking changes require incrementing major version (v2).
-
+https://ispilo-backend-32613e7af752.herokuapp.com/api/v1
 Authentication
 
 - Scheme: Bearer token in `Authorization` header.

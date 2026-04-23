@@ -1,5 +1,4 @@
 package com.ispilo.repository;
-
 import com.ispilo.model.entity.Post;
 import com.ispilo.model.entity.PostLike;
 import com.ispilo.model.entity.User;
@@ -10,6 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface PostLikeRepository extends JpaRepository<PostLike, String> {
-    Optional<PostLike> findByUserAndPost(User user, Post post);
-    boolean existsByUserAndPost(User user, Post post);
+    long countByPost(Post post);
+    Optional<PostLike> findByPostAndUser(Post post, User authUser);
+    Optional<PostLike> findByUserAndPost(User authUser, Post post);
+    boolean existsByUserAndPost(User authUser, Post post);
 }

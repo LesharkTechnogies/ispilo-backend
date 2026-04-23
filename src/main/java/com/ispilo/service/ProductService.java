@@ -98,15 +98,20 @@ public class ProductService {
      * Create a new product
      */
     public ProductResponse createProduct(String username, CreateProductRequest request) {
-        // We need to check if user exists, even if we don't use the object directly here
         com.ispilo.model.entity.User user = userRepository.findByEmail(username)
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
         
-        String userId = user.getId();
+        boolean isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+        Seller seller;
 
-        Seller seller = sellerRepository.findByUserId(userId)
-                .orElseThrow(() -> new BadRequestException("User is not a seller. Please register as seller first."));
+        if (isAdmin && request.sellerId() != null && !request.sellerId().trim().isEmpty()) {
+            seller = sellerRepository.findById(request.sellerId())
+                    .orElseThrow(() -> new NotFoundException("Seller not found for the provided ID"));
+        } else {
+            seller = sellerRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new BadRequestException("User is not a seller. Please register as seller first."));
+        }
 
         // Validate product data
         if (request.title() == null || request.title().trim().isEmpty()) {
@@ -116,13 +121,18 @@ public class ProductService {
             throw new BadRequestException("Product price must be greater than 0");
         }
 
+        String imageUrl = request.mainImage();
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            imageUrl = "https://ispilo.com/default-product-image.png";
+        }
+
         Product product = Product.builder()
                 .title(request.title())
                 .name(request.title())
                 .description(request.description())
                 .price(request.price())
-                .mainImage(request.mainImage())
-                .images(request.images() != null ? request.images() : List.of())
+                .mainImage(imageUrl)
+                .images(request.images() != null ? request.images() : List.of(imageUrl))
                 .category(request.category())
                 .condition(request.condition() != null ? request.condition() : "New")
                 .location(request.location())
@@ -133,7 +143,7 @@ public class ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
-        log.info("Product created: {}", saved.getId());
+        log.info("Product created: {} by user {}", saved.getId(), user.getId());
 
         return ProductResponse.fromEntity(saved);
     }
@@ -149,8 +159,10 @@ public class ProductService {
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
 
+        boolean isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+
         // Verify ownership
-        if (!product.getSeller().getUser().getId().equals(user.getId())) {
+        if (!isAdmin && !product.getSeller().getUser().getId().equals(user.getId())) {
             throw new BadRequestException("You do not have permission to update this product");
         }
 
@@ -164,12 +176,18 @@ public class ProductService {
         if (request.price() != null && request.price().compareTo(BigDecimal.ZERO) > 0) {
             product.setPrice(request.price());
         }
-        if (request.mainImage() != null) {
+        if (request.mainImage() != null && !request.mainImage().trim().isEmpty()) {
             product.setMainImage(request.mainImage());
+        } else if (product.getMainImage() == null || product.getMainImage().trim().isEmpty()) {
+            product.setMainImage("https://ispilo.com/default-product-image.png");
         }
-        if (request.images() != null) {
+        
+        if (request.images() != null && !request.images().isEmpty()) {
             product.setImages(request.images());
+        } else if (product.getImages() == null || product.getImages().isEmpty()) {
+            product.setImages(List.of("https://ispilo.com/default-product-image.png"));
         }
+
         if (request.category() != null) {
             product.setCategory(request.category());
         }
@@ -184,7 +202,7 @@ public class ProductService {
         }
 
         Product updated = productRepository.save(product);
-        log.info("Product updated: {}", productId);
+        log.info("Product updated: {} by user {}", productId, user.getId());
 
         return ProductResponse.fromEntity(updated);
     }
@@ -200,13 +218,15 @@ public class ProductService {
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
 
+        boolean isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+
         // Verify ownership
-        if (!product.getSeller().getUser().getId().equals(user.getId())) {
+        if (!isAdmin && !product.getSeller().getUser().getId().equals(user.getId())) {
             throw new BadRequestException("You do not have permission to delete this product");
         }
 
         productRepository.delete(product);
-        log.info("Product deleted: {}", productId);
+        log.info("Product deleted: {} by user {}", productId, user.getId());
     }
 
     /**

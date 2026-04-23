@@ -134,12 +134,13 @@ public class PostService {
         User authUser = userRepository.findByEmail(username)
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
-
+        
         Optional<PostLike> existingLike = postLikeRepository.findByUserAndPost(authUser, post);
 
         if (existingLike.isPresent()) {
             postLikeRepository.delete(existingLike.get());
-            post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
+            int current = (post.getLikesCount() == null ? 0 : post.getLikesCount());
+            post.setLikesCount(Math.max(0, current - 1));
         } else {
             PostLike newLike = PostLike.builder()
                     .user(authUser)

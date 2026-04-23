@@ -3,12 +3,11 @@ spring:
     name: ispilo-backend
 
   datasource:
-    # Heroku Java buildpack automatically sets JDBC_DATABASE_URL, JDBC_DATABASE_USERNAME, JDBC_DATABASE_PASSWORD
-    # We use these. If not set (local), we fall back to local defaults.
-    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/ispilo_db}
-    username: ${JDBC_DATABASE_USERNAME:postgres}
-    password: ${JDBC_DATABASE_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
+    # We use explicit environment variables for security.
+     url: ${DATABASE_URL}
+     username: ${DATABASE_USERNAME}
+     password: ${DATABASE_PASSWORD}
+     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -39,7 +38,8 @@ server:
     accept-count: 200
 
 jwt:
-  secret: ${JWT_SECRET:MjU2Yml0c2VjcmV0a2V5Zm9yaXNwaWxvYXBwbGljYXRpb25jaGFuZ2VpbnByb2R1Y3Rpb24=}
+  
+  secret: ${JWT_SECRET}
   expiration: 86400000
   refresh-expiration: 604800000
 
@@ -61,6 +61,11 @@ forgot-password:
   resend-cooldown-seconds: ${FORGOT_PASSWORD_RESEND_COOLDOWN_SECONDS:60}
   max-attempts: ${FORGOT_PASSWORD_MAX_ATTEMPTS:5}
 
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME:dm6ijapq4}
+  api_key: ${CLOUDINARY_API_KEY:511788245616987}
+  api_secret: ${CLOUDINARY_API_SECRET:5wagQTU7MQBF3wabxy8XRmXcZaw}
+
 management:
   endpoints:
     web:
@@ -75,3 +80,4 @@ logging:
     com.ispilo: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+

@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -321,8 +323,55 @@ public class UserService {
     }
 
     private Integer getConnectionsCount(String userId) {
-        // TODO: Query from Connection table where userId = ?
-        return 0;
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return 0;
+        
+        List<User> followers = userFollowRepository.findByFollowing(user).stream()
+                .map(UserFollow::getFollower).toList();
+        List<User> following = userFollowRepository.findAllByFollower(user).stream()
+                .map(UserFollow::getFollowing).toList();
+        
+        return (int) followers.stream().filter(following::contains).count();
+    }
+
+    /**
+     * Get list of followers
+     */
+    public List<UserResponse> getFollowers(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        return userFollowRepository.findByFollowing(user).stream()
+                .map(follow -> UserResponse.fromEntity(follow.getFollower()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get list of following
+     */
+    public List<UserResponse> getFollowing(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        return userFollowRepository.findAllByFollower(user).stream()
+                .map(follow -> UserResponse.fromEntity(follow.getFollowing()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get list of connections (Mutual follows)
+     */
+    public List<UserResponse> getConnections(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        
+        List<User> followers = userFollowRepository.findByFollowing(user).stream()
+                .map(UserFollow::getFollower).toList();
+        List<User> following = userFollowRepository.findAllByFollower(user).stream()
+                .map(UserFollow::getFollowing).toList();
+        
+        return followers.stream()
+                .filter(following::contains)
+                .map(UserResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 }
 

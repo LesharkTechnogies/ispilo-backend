@@ -1,5 +1,6 @@
 package com.ispilo.controller;
 
+import com.ispilo.model.dto.response.GroupResponse;
 import com.ispilo.model.dto.response.PersonResponse;
 import com.ispilo.model.dto.response.PostResponse;
 import com.ispilo.model.dto.response.SearchResponse;
@@ -37,6 +38,15 @@ public class SearchController {
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(searchService.searchPeople(q, pageable));
+    }
+
+    @GetMapping("/groups")
+    public ResponseEntity<SearchResponse<GroupResponse>> searchGroups(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(searchService.searchGroups(q, pageable));
     }
 
     @GetMapping("/typeahead")

@@ -21,14 +21,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping({"/api/v1/products", "/api/products", "/api/v2/products"})
+@RequestMapping("/api/v1/products")
 @Tag(name = "Products", description = "Marketplace Product APIs")
 @RequiredArgsConstructor
 @Slf4j
@@ -39,7 +38,6 @@ public class ProductController {
     private final UserRepository userRepository;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Upload a product image")
     public ResponseEntity<MediaUploadResponse> uploadProductImage(
             @RequestParam("file") MultipartFile file,
@@ -123,7 +121,6 @@ public class ProductController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Create a new product")
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody CreateProductRequest request,
@@ -133,7 +130,6 @@ public class ProductController {
     }
 
     @PutMapping("/{productId}")
-    @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Update product details")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable String productId,
@@ -144,7 +140,6 @@ public class ProductController {
     }
 
     @DeleteMapping("/{productId}")
-    @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Delete a product")
     public ResponseEntity<?> deleteProduct(
             @PathVariable String productId,
@@ -154,7 +149,6 @@ public class ProductController {
     }
 
     @PostMapping("/{productId}/favorite")
-    @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Add product to favorites")
     public ResponseEntity<?> addToFavorites(
             @PathVariable String productId,
@@ -164,7 +158,6 @@ public class ProductController {
     }
 
     @DeleteMapping("/{productId}/favorite")
-    @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Remove product from favorites")
     public ResponseEntity<?> removeFromFavorites(
             @PathVariable String productId,
@@ -202,7 +195,6 @@ public class ProductController {
     }
 
     @PostMapping("/{productId}/reviews")
-    @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Add review to product")
     public ResponseEntity<?> addProductReview(
             @PathVariable String productId,
