@@ -2,7 +2,8 @@ package com.ispilo.service;
 
 import com.ispilo.model.dto.request.CreateGroupRequest;
 import com.ispilo.model.entity.GroupEntity;
-import com.ispilo.model.entity.GroupMembership;
+import com.ispilo.model.entity.GroupMembershipEntity;
+import com.ispilo.model.enums.GroupRole;
 import com.ispilo.model.entity.User;
 import com.ispilo.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,11 @@ public class GroupService {
                 .build();
         groupRepo.save(g);
 
-        GroupMembership m = GroupMembership.builder()
+        GroupMembershipEntity m = GroupMembershipEntity.builder()
                 .id(UUID.randomUUID().toString())
                 .group(g)
                 .user(creator)
-                .role(GroupMembership.Role.ADMIN)
+                .role(GroupRole.ADMIN)
                 .build();
         membershipRepo.save(m);
         return g;
@@ -48,11 +49,11 @@ public class GroupService {
         GroupEntity g = groupRepo.findById(groupId).orElseThrow();
         User u = userRepo.findByEmail(userEmail).orElseThrow();
         if (membershipRepo.findByGroupAndUser(g, u).isPresent()) return;
-        GroupMembership m = GroupMembership.builder()
+        GroupMembershipEntity m = GroupMembershipEntity.builder()
                 .id(UUID.randomUUID().toString())
                 .group(g)
                 .user(u)
-                .role(GroupMembership.Role.MEMBER)
+                .role(GroupRole.MEMBER)
                 .build();
         membershipRepo.save(m);
     }
@@ -61,12 +62,12 @@ public class GroupService {
     public void promoteToAdmin(String requesterEmail, String groupId, String memberId) {
         GroupEntity g = groupRepo.findById(groupId).orElseThrow();
         User requester = userRepo.findByEmail(requesterEmail).orElseThrow();
-        GroupMembership requesterMembership = membershipRepo.findByGroupAndUser(g, requester).orElseThrow();
-        if (requesterMembership.getRole() != GroupMembership.Role.ADMIN) throw new AccessDeniedException("Only admins can promote");
+        GroupMembershipEntity requesterMembership = membershipRepo.findByGroupAndUser(g, requester).orElseThrow();
+        if (requesterMembership.getRole() != GroupRole.ADMIN) throw new AccessDeniedException("Only admins can promote");
 
         User member = userRepo.findById(memberId).orElseThrow();
-        GroupMembership gm = membershipRepo.findByGroupAndUser(g, member).orElseThrow();
-        gm.setRole(GroupMembership.Role.ADMIN);
+        GroupMembershipEntity gm = membershipRepo.findByGroupAndUser(g, member).orElseThrow();
+        gm.setRole(GroupRole.ADMIN);
         membershipRepo.save(gm);
     }
 
@@ -74,8 +75,8 @@ public class GroupService {
     public void removeMember(String requesterEmail, String groupId, String memberId) {
         GroupEntity g = groupRepo.findById(groupId).orElseThrow();
         User requester = userRepo.findByEmail(requesterEmail).orElseThrow();
-        GroupMembership requesterMembership = membershipRepo.findByGroupAndUser(g, requester).orElseThrow();
-        if (requesterMembership.getRole() != GroupMembership.Role.ADMIN) throw new AccessDeniedException("Only admins can remove members");
+        GroupMembershipEntity requesterMembership = membershipRepo.findByGroupAndUser(g, requester).orElseThrow();
+        if (requesterMembership.getRole() != GroupRole.ADMIN) throw new AccessDeniedException("Only admins can remove members");
 
         User member = userRepo.findById(memberId).orElseThrow();
         membershipRepo.findByGroupAndUser(g, member).ifPresent(membershipRepo::delete);
@@ -91,7 +92,7 @@ public class GroupService {
         User u = userRepo.findByEmail(userEmail).orElse(null);
         if (u == null) return false;
         return membershipRepo.findByGroupAndUser(g, u)
-                .map(m -> m.getRole() == GroupMembership.Role.ADMIN)
+                .map(m -> m.getRole() == GroupRole.ADMIN)
                 .orElse(false);
     }
 

@@ -5,7 +5,8 @@ import com.ispilo.exception.UnauthorizedException;
 import com.ispilo.model.dto.request.CreatePostRequest;
 import com.ispilo.model.dto.response.GroupPostResponse;
 import com.ispilo.model.entity.GroupEntity;
-import com.ispilo.model.entity.GroupMembership;
+import com.ispilo.model.entity.GroupMembershipEntity;
+import com.ispilo.model.enums.GroupRole;
 import com.ispilo.model.entity.PostEntity;
 import com.ispilo.model.entity.GroupPostLike;
 import com.ispilo.model.entity.User;
@@ -47,7 +48,7 @@ public class GroupPostService {
                 .orElseThrow(() -> new NotFoundException("Group not found"));
 
         // Ensure user is a member of the group
-        GroupMembership membership = groupMemberRepository.findByGroupAndUser(group, user)
+        GroupMembershipEntity membership = groupMemberRepository.findByGroupAndUser(group, user)
                 .orElseThrow(() -> new UnauthorizedException("You are not a member of this group."));
 
         String postContent = request.getActualContent();
@@ -65,7 +66,7 @@ public class GroupPostService {
         
         // Notify group members about the new post
         List<User> membersToNotify = groupMemberRepository.findByGroup(group).stream()
-                .map(GroupMembership::getUser)
+                .map(GroupMembershipEntity::getUser)
                 .filter(u -> !u.getId().equals(user.getId())) // Don't notify the author
                 .collect(Collectors.toList());
 
@@ -84,7 +85,7 @@ public class GroupPostService {
             );
         }
 
-        boolean isAdmin = membership.getRole() == GroupMembership.Role.ADMIN;
+        boolean isAdmin = membership.getRole() == GroupRole.ADMIN;
         return groupPostMapper.toDto(post, isAdmin);
     }
 
@@ -94,10 +95,10 @@ public class GroupPostService {
                 .orElseThrow(() -> new NotFoundException("Group not found"));
 
         // Ensure user is a member to view posts
-        GroupMembership member = groupMemberRepository.findByGroupAndUser(group, user)
+        GroupMembershipEntity member = groupMemberRepository.findByGroupAndUser(group, user)
                 .orElseThrow(() -> new UnauthorizedException("You are not a member of this group."));
         
-        boolean isGroupAdmin = member.getRole() == GroupMembership.Role.ADMIN;
+        boolean isGroupAdmin = member.getRole() == GroupRole.ADMIN;
 
         Page<PostEntity> posts = groupPostRepository.findByGroup(group, pageable);
         
@@ -117,7 +118,7 @@ public class GroupPostService {
         GroupEntity group = post.getGroup();
         boolean isAuthor = post.getAuthor() != null && post.getAuthor().getId().equals(user.getId());
         boolean isAdmin = groupMemberRepository.findByGroupAndUser(group, user)
-                .map(member -> member.getRole() == GroupMembership.Role.ADMIN)
+                .map(member -> member.getRole() == GroupRole.ADMIN)
                 .orElse(false);
 
         if (!isAuthor && !isAdmin) {
@@ -138,7 +139,7 @@ public class GroupPostService {
             throw new IllegalArgumentException("This is not a group post.");
         }
 
-        GroupMembership member = groupMemberRepository.findByGroupAndUser(group, user)
+        GroupMembershipEntity member = groupMemberRepository.findByGroupAndUser(group, user)
                 .orElseThrow(() -> new UnauthorizedException("You are not a member of this group."));
 
         Optional<GroupPostLike> existingLike = groupPostLikeRepository.findByPostAndUser(post, user);
@@ -155,7 +156,7 @@ public class GroupPostService {
             groupPostLikeRepository.save(newLike);
         }
 
-        boolean isGroupAdmin = member.getRole() == GroupMembership.Role.ADMIN;
+        boolean isGroupAdmin = member.getRole() == GroupRole.ADMIN;
         return groupPostMapper.toDto(post, isGroupAdmin);
     }
 

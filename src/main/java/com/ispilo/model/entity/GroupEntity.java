@@ -24,8 +24,9 @@ public class GroupEntity {
     private Instant createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id")
     private User createdBy;
 
     @OneToMany(mappedBy = "group")
-    private Set<GroupMembership> memberships;
+    private Set<GroupMembershipEntity> memberships;
 }

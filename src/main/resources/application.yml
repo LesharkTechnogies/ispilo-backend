@@ -1,36 +1,30 @@
 spring:
   application:
-    name: ispilo-backend
-
-  datasource:
-    # We use explicit environment variables for security.
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
-     driver-class-name: org.postgresql.Driver
-
+    name: ispilo-backend 
+  datasource: # Corrected indentation
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver # Corrected typo: Drive -> Driver
   jpa:
     hibernate:
       ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+    properties: # Keep this block if you have other hibernate properties
+      hibernate: # Keep this block if you have other hibernate properties
         format_sql: true
     show-sql: true
-
   servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
-
   cache:
     type: simple
-
-server:
-  port: ${PORT:8080}
   error:
     include-message: always
     include-binding-errors: always
+
+server: # New top-level block for server properties
+  port: ${PORT:8080} # Moved here
   tomcat:
     threads:
       max: 400
@@ -80,4 +74,3 @@ logging:
     com.ispilo: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
-

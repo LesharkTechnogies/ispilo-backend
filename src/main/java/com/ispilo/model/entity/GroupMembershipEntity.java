@@ -1,16 +1,19 @@
 package com.ispilo.model.entity;
 
+import com.ispilo.model.enums.GroupRole;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
+
 @Entity
-@Table(name = "group_memberships", uniqueConstraints = @UniqueConstraint(columnNames = {"group_id","user_id"}))
+@Table(name = "group_members", uniqueConstraints = @UniqueConstraint(columnNames = {"group_id","user_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class GroupMembership {
+public class GroupMembershipEntity {
     @Id
     private String id;
 
@@ -23,7 +26,7 @@ public class GroupMembership {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    private Role role; // ADMIN, MEMBER
+    private GroupRole role;
 
-    public enum Role {ADMIN, MEMBER ,MODERATOR}
+    private Instant joinedAt;
 }
