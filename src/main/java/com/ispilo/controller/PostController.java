@@ -57,6 +57,15 @@ public class PostController {
         return ResponseEntity.ok(postService.getPost(postId));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<Page<PostResponse>> getMyPosts(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(postService.getMyPosts(userDetails.getUsername(), pageable));
+    }
+
     @PutMapping("/{postId}")
     public ResponseEntity<PostResponse> updatePost(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -71,6 +80,17 @@ public class PostController {
             @PathVariable String postId) {
         postService.deletePost(userDetails.getUsername(), postId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Page<PostResponse>> getUserPosts(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        String viewerUsername = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(postService.getUserPosts(userId, viewerUsername, pageable));
     }
 
     @GetMapping("/feed")

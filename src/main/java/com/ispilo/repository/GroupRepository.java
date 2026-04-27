@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface GroupRepository extends JpaRepository<GroupEntity, String> {
 
+    boolean existsByNameIgnoreCase(String name);
+
     @Query("SELECT g FROM GroupEntity g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<GroupEntity> searchGroups(@Param("query") String query, Pageable pageable);
 

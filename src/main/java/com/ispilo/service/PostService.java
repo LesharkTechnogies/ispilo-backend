@@ -37,24 +37,50 @@ public class PostService {
     private final NotificationService notificationService;
     private final UserFollowRepository userFollowRepository;
 
-    public Page<PostResponse> getFeed(String username, Pageable pageable) {
-        User user = userRepository.findByEmail(username)
-                .orElseGet(() -> userRepository.findByPhone(username)
+    private User resolveUser(String usernameOrPhoneOrEmail) {
+        return userRepository.findByEmail(usernameOrPhoneOrEmail)
+                .orElseGet(() -> userRepository.findByPhone(usernameOrPhoneOrEmail)
                         .orElseThrow(() -> new NotFoundException("User not found")));
+    }
+
+    private PostResponse toPostResponse(Post post, User viewer) {
+        boolean likedByCurrentUser = viewer != null && postLikeRepository.existsByUserAndPost(viewer, post);
+        return PostResponse.fromEntity(post, likedByCurrentUser);
+    }
+
+    public Page<PostResponse> getFeed(String username, Pageable pageable) {
+        User user = resolveUser(username);
 
         List<User> followingUsers = userFollowRepository.findAllByFollower(user).stream()
                 .map(UserFollow::getFollowing)
                 .collect(Collectors.toList());
 
         return postRepository.findAllByUserIn(followingUsers, pageable)
-                .map(PostResponse::fromEntity);
+                .map(post -> toPostResponse(post, user));
+    }
+
+    public Page<PostResponse> getUserPosts(String userId, Pageable pageable) {
+        return getUserPosts(userId, null, pageable);
+    }
+
+    public Page<PostResponse> getUserPosts(String userId, String viewerUsername, Pageable pageable) {
+    final User viewerFinal = (viewerUsername != null && !viewerUsername.isBlank())
+        ? resolveUser(viewerUsername)
+        : null;
+
+    return postRepository.findByUserId(userId, pageable)
+        .map(post -> toPostResponse(post, viewerFinal));
+    }
+
+    public Page<PostResponse> getMyPosts(String username, Pageable pageable) {
+        User currentUser = resolveUser(username);
+        return postRepository.findByUserId(currentUser.getId(), pageable)
+                .map(post -> toPostResponse(post, currentUser));
     }
 
     @Transactional
     public PostResponse createPost(String username, CreatePostRequest request) {
-        User user = userRepository.findByEmail(username)
-                .orElseGet(() -> userRepository.findByPhone(username)
-                        .orElseThrow(() -> new NotFoundException("User not found")));
+    User user = resolveUser(username);
 
         String postContent = request.getActualContent();
 
@@ -73,7 +99,7 @@ public class PostService {
         List<User> followersToNotify = followers.stream().map(UserFollow::getFollower).collect(Collectors.toList());
         notificationService.sendPushNotifications(followersToNotify, "New Post", user.getName() + " just shared a new post.", "NEW_POST", post.getId());
 
-        return PostResponse.fromEntity(post);
+    return toPostResponse(post, user);
     }
 
     public PostResponse getPost(String postId) {
@@ -87,9 +113,7 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        User authUser = userRepository.findByEmail(username)
-                .orElseGet(() -> userRepository.findByPhone(username)
-                        .orElseThrow(() -> new NotFoundException("User not found")));
+    User authUser = resolveUser(username);
 
         if (!post.getUser().getId().equals(authUser.getId())) {
             throw new UnauthorizedException("You are not authorized to update this post");
@@ -107,7 +131,7 @@ public class PostService {
             post.setMediaUrls(request.getMediaUrls());
         }
 
-        return PostResponse.fromEntity(postRepository.save(post));
+    return toPostResponse(postRepository.save(post), authUser);
     }
 
     @Transactional
@@ -115,9 +139,7 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        User authUser = userRepository.findByEmail(username)
-                .orElseGet(() -> userRepository.findByPhone(username)
-                        .orElseThrow(() -> new NotFoundException("User not found")));
+    User authUser = resolveUser(username);
 
         if (!post.getUser().getId().equals(authUser.getId())) {
             throw new UnauthorizedException("You are not authorized to delete this post");
@@ -128,12 +150,10 @@ public class PostService {
 
     @Transactional
     public PostResponse toggleLike(String username, String postId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdWithLock(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        User authUser = userRepository.findByEmail(username)
-                .orElseGet(() -> userRepository.findByPhone(username)
-                        .orElseThrow(() -> new NotFoundException("User not found")));
+    User authUser = resolveUser(username);
         
         Optional<PostLike> existingLike = postLikeRepository.findByUserAndPost(authUser, post);
 
@@ -150,7 +170,7 @@ public class PostService {
             post.setLikesCount((post.getLikesCount() == null ? 0 : post.getLikesCount()) + 1);
         }
 
-        return PostResponse.fromEntity(postRepository.save(post));
+    return toPostResponse(postRepository.save(post), authUser);
     }
 
     @Transactional
@@ -158,9 +178,7 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
-        User authUser = userRepository.findByEmail(username)
-                .orElseGet(() -> userRepository.findByPhone(username)
-                        .orElseThrow(() -> new NotFoundException("User not found")));
+    User authUser = resolveUser(username);
 
         Comment parentComment = null;
         if (request.getParentCommentId() != null && !request.getParentCommentId().isEmpty()) {

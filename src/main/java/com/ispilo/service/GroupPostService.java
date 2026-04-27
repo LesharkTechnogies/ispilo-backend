@@ -100,20 +100,16 @@ public class GroupPostService {
         
         boolean isGroupAdmin = member.getRole() == GroupRole.ADMIN;
 
-        Page<PostEntity> posts = groupPostRepository.findByGroup(group, pageable);
+        Page<PostEntity> posts = groupPostRepository.findByGroupOrderByCreatedAtDesc(group, pageable);
         
         return posts.map(post -> groupPostMapper.toDto(post, isGroupAdmin));
     }
 
     @Transactional
-    public void deleteGroupPost(String username, String postId) {
+        public void deleteGroupPost(String username, String groupId, String postId) {
         User user = findUserByUsername(username);
-        PostEntity post = groupPostRepository.findById(postId)
+                PostEntity post = groupPostRepository.findByIdAndGroupIdWithLock(postId, groupId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
-
-        if (post.getGroup() == null) {
-            throw new IllegalArgumentException("This is not a group post.");
-        }
 
         GroupEntity group = post.getGroup();
         boolean isAuthor = post.getAuthor() != null && post.getAuthor().getId().equals(user.getId());
@@ -129,9 +125,9 @@ public class GroupPostService {
     }
 
     @Transactional
-    public GroupPostResponse toggleLike(String username, String postId) {
+        public GroupPostResponse toggleLike(String username, String groupId, String postId) {
         User user = findUserByUsername(username);
-        PostEntity post = groupPostRepository.findById(postId)
+                PostEntity post = groupPostRepository.findByIdAndGroupIdWithLock(postId, groupId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
         GroupEntity group = post.getGroup();

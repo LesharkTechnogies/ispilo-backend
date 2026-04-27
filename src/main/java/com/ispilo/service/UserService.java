@@ -10,6 +10,7 @@ import com.ispilo.model.entity.User;
 import com.ispilo.model.entity.UserFollow;
 import com.ispilo.repository.UserRepository;
 import com.ispilo.repository.UserFollowRepository;
+import com.ispilo.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -29,6 +30,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserFollowRepository userFollowRepository;
+    private final PostRepository postRepository;
     private final MediaService mediaService;
     private final PasswordEncoder passwordEncoder;
 
@@ -212,25 +214,31 @@ public class UserService {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        if (targetUser.getProfilePublic()) {
-            return UserProfileResponse.fromUser(targetUser, true);
+        User currentUser = null;
+        if (userDetails != null) {
+            currentUser = userRepository.findByEmail(userDetails.getUsername())
+                    .orElseGet(() -> userRepository.findByPhone(userDetails.getUsername())
+                            .orElse(null));
         }
 
-        if (userDetails == null) {
-            return UserProfileResponse.fromUser(targetUser, false);
+        boolean isOwner = currentUser != null && currentUser.getId().equals(targetUser.getId());
+        boolean isFollowing = currentUser != null
+                && !isOwner
+                && userFollowRepository.existsByFollowerAndFollowing(currentUser, targetUser);
+
+        boolean isPublicProfile = Boolean.TRUE.equals(targetUser.getProfilePublic());
+        boolean canViewProfile = isPublicProfile || isOwner || isFollowing;
+
+        UserProfileResponse response = UserProfileResponse.fromUser(targetUser, canViewProfile);
+        response.setIsFollowing(isFollowing);
+
+        if (canViewProfile) {
+            response.setPostCount(getPostCount(userId));
+            response.setFollowersCount(getFollowersCount(userId));
+            response.setFollowingCount(getFollowingCount(userId));
         }
 
-        User currentUser = userRepository.findByEmail(userDetails.getUsername())
-                .orElseGet(() -> userRepository.findByPhone(userDetails.getUsername())
-                        .orElse(null));
-
-        if (currentUser == null) {
-            return UserProfileResponse.fromUser(targetUser, false);
-        }
-
-        boolean isFollowing = userFollowRepository.existsByFollowerAndFollowing(currentUser, targetUser);
-
-        return UserProfileResponse.fromUser(targetUser, isFollowing);
+        return response;
     }
 
     /**
@@ -306,8 +314,7 @@ public class UserService {
 
     // Helper methods for stats (TODO: implement with actual database queries)
     private Integer getPostCount(String userId) {
-        // TODO: Query from Post table where userId = ?
-        return 0;
+        return (int) postRepository.countByUserId(userId);
     }
 
     private Integer getFollowersCount(String userId) {

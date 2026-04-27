@@ -25,11 +25,16 @@ public class PostResponse {
     private List<String> mediaUrls;
     private Integer likesCount;
     private Integer commentsCount;
+    private Boolean likedByCurrentUser;
     private Integer viewCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public static PostResponse fromEntity(Post post) {
+        return fromEntity(post, false);
+    }
+
+    public static PostResponse fromEntity(Post post, boolean likedByCurrentUser) {
         return PostResponse.builder()
                 .id(post.getId())
                 .user(UserResponse.fromEntity(post.getUser()))
@@ -40,6 +45,7 @@ public class PostResponse {
                 .mediaUrls(post.getMediaUrls())
                 .likesCount(post.getLikesCount())
                 .commentsCount(post.getCommentsCount())
+                .likedByCurrentUser(likedByCurrentUser)
                 .viewCount(post.getViewCount())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

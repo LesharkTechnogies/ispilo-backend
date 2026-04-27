@@ -2,12 +2,17 @@ package com.ispilo.controller;
 
 import com.ispilo.model.dto.request.UpdateProfileRequest;
 import com.ispilo.model.dto.request.UpdateSettingsRequest;
+import com.ispilo.model.dto.response.PostResponse;
 import com.ispilo.model.dto.response.UserResponse;
 import com.ispilo.model.dto.response.UserProfileResponse;
+import com.ispilo.service.PostService;
 import com.ispilo.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +30,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final PostService postService;
 
     @GetMapping("/discover")
     public ResponseEntity<org.springframework.data.domain.Page<UserResponse>> discoverUsers(
@@ -81,6 +87,26 @@ public class UserController {
             @PathVariable String userId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(userService.getUserProfileById(userId, userDetails));
+    }
+
+    @GetMapping("/{userId}/posts")
+    public ResponseEntity<Page<PostResponse>> getProfilePosts(
+            @PathVariable String userId,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        String viewerUsername = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(postService.getUserPosts(userId, viewerUsername, pageable));
+    }
+
+    @GetMapping("/me/posts")
+    public ResponseEntity<Page<PostResponse>> getMyPosts(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(postService.getMyPosts(userDetails.getUsername(), pageable));
     }
 
     @PostMapping("/{userId}/follow")

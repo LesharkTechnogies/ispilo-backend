@@ -48,7 +48,7 @@ public class GroupPostController {
             @PathVariable String postId,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        groupPostService.deleteGroupPost(userDetails.getUsername(), postId);
+        groupPostService.deleteGroupPost(userDetails.getUsername(), groupId, postId);
         return ResponseEntity.noContent().build();
     }
 
@@ -58,7 +58,7 @@ public class GroupPostController {
             @PathVariable String postId,
             @AuthenticationPrincipal UserDetails userDetails) {
         
-        GroupPostResponse post = groupPostService.toggleLike(userDetails.getUsername(), postId);
+        GroupPostResponse post = groupPostService.toggleLike(userDetails.getUsername(), groupId, postId);
         return ResponseEntity.ok(post);
     }
 }

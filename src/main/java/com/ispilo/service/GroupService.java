@@ -1,5 +1,6 @@
 package com.ispilo.service;
 
+import com.ispilo.exception.ConflictException;
 import com.ispilo.model.dto.request.CreateGroupRequest;
 import com.ispilo.model.entity.GroupEntity;
 import com.ispilo.model.entity.GroupMembershipEntity;
@@ -23,6 +24,9 @@ public class GroupService {
 
     @Transactional
     public GroupEntity createGroup(String creatorEmail, CreateGroupRequest r) {
+        if (groupRepo.existsByNameIgnoreCase(r.getName())) {
+            throw new ConflictException("A group with this name already exists.");
+        }
         User creator = userRepo.findByEmail(creatorEmail).orElseThrow();
         GroupEntity g = GroupEntity.builder()
                 .id(UUID.randomUUID().toString())
