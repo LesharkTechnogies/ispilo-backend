@@ -1,9 +1,29 @@
 # Admin Dashboard & API Documentation
 
-## 1. How to Register as Admin
-Currently, there is no direct public endpoint to register a user as an admin for security reasons. To grant admin privileges, register a standard user and manually update the database:
+## 1. Admin Registration Status (Is it implemented?)
+There is **no dedicated admin registration endpoint** in the API. Admin status is controlled by the `is_admin` flag on the `users` table.
+
+### How to Register an Admin User
+1. Register a normal user via **POST** `/api/v1/auth/register`.
+2. Promote that user to admin by updating `users.is_admin` in the database.
+
 ```sql
 UPDATE users SET is_admin = true WHERE email = 'admin@example.com';
+```
+
+### Registration Parameters (same as standard register)
+The admin user is created using the same payload as the normal registration endpoint:
+```json
+{
+  "firstName": "Admin",
+  "lastName": "User",
+  "email": "admin@example.com",
+  "password": "StrongPassword123",
+  "phone": "+254700000000",
+  "countryCode": "KE",
+  "county": "Nairobi",
+  "town": "Nairobi"
+}
 ```
 
 ## 2. How to Login as Admin
@@ -18,12 +38,38 @@ Once the user has `is_admin` set to true, they can log in via the standard authe
     ```
   - **Response:** Returns JWT tokens with admin roles/claims.
 
-## 3. How to Display All Data (Admin Dashboard)
-Admins have access to specialized endpoints to retrieve platform statistics and audit logs, displaying all system data summaries.
+## 3. Admin Dashboard Capabilities
+Admins can access system-wide statistics and audit logs for dashboards and system control.
 - **GET** `/api/v1/admin/dashboard/stats`
-  - Displays overall statistics (users count, posts, etc.).
+  - Returns overall platform statistics (users, posts, group posts, groups, products, sellers).
 - **GET** `/api/v1/admin/audit-logs`
-  - Retrieves paginated audit logs of system actions.
+  - Returns paginated audit logs of system actions.
+
+### Access Control
+All admin endpoints require the authenticated user to have `is_admin = true`. Non-admin users receive **401 Unauthorized**.
+
+### Promote User to Admin (API)
+Admins can promote another user (or themselves) by validating admin credentials.
+- **POST** `/api/v1/admin/promote`
+  - **Payload:**
+    ```json
+    {
+      "email": "admin@example.com",
+      "password": "AdminPassword123",
+      "targetEmail": "user-to-promote@example.com"
+    }
+    ```
+  - **Notes:**
+    - `targetEmail` is optional; if omitted, the admin user promotes themselves.
+  - **Response:**
+    ```json
+    {
+      "success": true,
+      "message": "User promoted to admin",
+      "userId": "uuid",
+      "email": "user-to-promote@example.com"
+    }
+    ```
 
 ---
 
@@ -42,6 +88,7 @@ Below is the comprehensive list of all API functions across the platform, includ
 ### Admin (`/api/v1/admin`)
 - **GET** `/dashboard/stats` - Display all overall dashboard data
 - **GET** `/audit-logs` - Retrieve system audit logs (supports `page` and `size` query params)
+- **POST** `/promote` - Promote a user to admin (validates admin credentials)
 
 ### Users (`/api/v1/users`)
 - **GET** `/discover` - Discover users. **Params:** `page`, `size`. **Returns:** `Page<UserResponse>`

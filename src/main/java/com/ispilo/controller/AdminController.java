@@ -1,6 +1,7 @@
 package com.ispilo.controller;
 
 import com.ispilo.exception.UnauthorizedException;
+import com.ispilo.model.dto.request.AdminPromoteRequest;
 import com.ispilo.model.dto.response.AdminDashboardStatsResponse;
 import com.ispilo.model.entity.AuditLog;
 import com.ispilo.model.entity.User;
@@ -15,6 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -48,5 +52,16 @@ public class AdminController {
         verifyAdmin(userDetails.getUsername());
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return ResponseEntity.ok(adminService.getAuditLogs(pageable));
+    }
+
+    @PostMapping("/promote")
+    public ResponseEntity<Map<String, Object>> promoteAdmin(@Valid @RequestBody AdminPromoteRequest request) {
+        User promotedUser = adminService.promoteAdmin(request);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "User promoted to admin",
+                "userId", promotedUser.getId(),
+                "email", promotedUser.getEmail()
+        ));
     }
 }
