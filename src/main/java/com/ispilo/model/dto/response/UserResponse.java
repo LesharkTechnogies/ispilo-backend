@@ -35,7 +35,8 @@ public class UserResponse {
     private LocalDateTime lastSeenAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Boolean isFollowing; // Added to check if current user follows this user
+    private Boolean isFollowing;
+    private Boolean isAdminUser; // Added to check if current user follows this user
 
     public static UserResponse fromEntity(User user) {
         return UserResponse.builder()
@@ -62,7 +63,8 @@ public class UserResponse {
                 .lastSeenAt(user.getLastSeenAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                .isFollowing(false) // Default value, will be updated by services if needed
+                .isFollowing(false) 
+                .isAdminUser(user.getIsAdmin()) // Default value, will be updated by services if needed
                 .build();
     }
 }
