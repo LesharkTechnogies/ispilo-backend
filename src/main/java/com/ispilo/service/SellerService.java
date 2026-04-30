@@ -33,7 +33,7 @@ public class SellerService {
                 .businessName(request.getBusinessName())
                 .businessDescription(request.getBusinessDescription())
                 .businessAddress(request.getBusinessAddress())
-                .isVerified(false)
+        .isVerified(true)
                 .build();
 
         seller = sellerRepository.save(seller);

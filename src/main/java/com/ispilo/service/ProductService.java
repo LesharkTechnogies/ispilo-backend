@@ -126,13 +126,15 @@ public class ProductService {
             imageUrl = "https://ispilo.com/default-product-image.png";
         }
 
+        List<String> images = buildProductImages(imageUrl, request);
+
         Product product = Product.builder()
                 .title(request.title())
                 .name(request.title())
                 .description(request.description())
                 .price(request.price())
                 .mainImage(imageUrl)
-                .images(request.images() != null ? request.images() : List.of(imageUrl))
+                .images(images)
                 .category(request.category())
                 .condition(request.condition() != null ? request.condition() : "New")
                 .location(request.location())
@@ -181,9 +183,11 @@ public class ProductService {
         } else if (product.getMainImage() == null || product.getMainImage().trim().isEmpty()) {
             product.setMainImage("https://ispilo.com/default-product-image.png");
         }
-        
-        if (request.images() != null && !request.images().isEmpty()) {
-            product.setImages(request.images());
+
+        boolean hasImageInputs = hasImageInputs(request);
+        if (hasImageInputs) {
+            String mainImage = product.getMainImage();
+            product.setImages(buildProductImages(mainImage, request));
         } else if (product.getImages() == null || product.getImages().isEmpty()) {
             product.setImages(List.of("https://ispilo.com/default-product-image.png"));
         }
@@ -254,6 +258,59 @@ public class ProductService {
                         .orElseThrow(() -> new NotFoundException("User not found")));
         // TODO: Implement removal from favorites
         log.info("Product {} removed from favorites by user {}", productId, user.getId());
+    }
+
+    private boolean hasImageInputs(CreateProductRequest request) {
+        return (request.mainImage() != null && !request.mainImage().trim().isEmpty())
+                || (request.imageUrl1() != null && !request.imageUrl1().trim().isEmpty())
+                || (request.imageUrl2() != null && !request.imageUrl2().trim().isEmpty())
+                || (request.imageUrl3() != null && !request.imageUrl3().trim().isEmpty())
+                || (request.imageUrl4() != null && !request.imageUrl4().trim().isEmpty())
+                || (request.images() != null && !request.images().isEmpty());
+    }
+
+    private List<String> buildProductImages(String mainImage, CreateProductRequest request) {
+        List<String> images = new ArrayList<>();
+        if (mainImage != null && !mainImage.trim().isEmpty()) {
+            images.add(mainImage);
+        }
+
+        addIfPresent(images, request.imageUrl1());
+        addIfPresent(images, request.imageUrl2());
+        addIfPresent(images, request.imageUrl3());
+        addIfPresent(images, request.imageUrl4());
+
+        if (request.images() != null) {
+            for (String url : request.images()) {
+                if (images.size() >= 5) {
+                    break;
+                }
+                addIfPresent(images, url);
+            }
+        }
+
+        if (images.isEmpty()) {
+            images.add("https://ispilo.com/default-product-image.png");
+        }
+
+        if (images.size() > 5) {
+            return images.subList(0, 5);
+        }
+
+        return images;
+    }
+
+    private void addIfPresent(List<String> images, String url) {
+        if (url == null) {
+            return;
+        }
+        String trimmed = url.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        if (!images.contains(trimmed)) {
+            images.add(trimmed);
+        }
     }
 
     /**

@@ -97,6 +97,7 @@ The base URL for all product endpoints is `/api/v1/products`. The API is version
 -   **Description:** Creates a new product.
 -   **Authentication:** `SELLER` role required.
 -   **Request Body:** `CreateProductRequest`
+-   **Notes:** Upload product images on the frontend and pass **URLs only**.
 -   **Success Response (201 Created):** `ProductResponse`
 
 ---
@@ -109,6 +110,7 @@ The base URL for all product endpoints is `/api/v1/products`. The API is version
 -   **Path Parameters:**
     -   `productId`: The ID of the product to update.
 -   **Request Body:** `CreateProductRequest`
+-   **Notes:** Upload product images on the frontend and pass **URLs only**.
 -   **Success Response (200 OK):** `ProductResponse`
 
 ---

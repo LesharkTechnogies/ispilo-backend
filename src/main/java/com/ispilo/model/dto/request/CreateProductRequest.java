@@ -26,6 +26,18 @@ public record CreateProductRequest(
     @URL(message = "Main image must be a valid URL")
     String mainImage,
 
+    @URL(message = "Image URL 1 must be a valid URL")
+    String imageUrl1,
+
+    @URL(message = "Image URL 2 must be a valid URL")
+    String imageUrl2,
+
+    @URL(message = "Image URL 3 must be a valid URL")
+    String imageUrl3,
+
+    @URL(message = "Image URL 4 must be a valid URL")
+    String imageUrl4,
+
     List<@URL(message = "Each image must be a valid URL") String> images,
     
     String category,
