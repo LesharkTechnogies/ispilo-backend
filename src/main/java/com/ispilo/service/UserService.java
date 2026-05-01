@@ -196,6 +196,12 @@ public class UserService {
         profile.put("phonePrivacyPublic", user.getPhonePrivacyPublic());
         profile.put("isVerified", user.getIsVerified());
         profile.put("createdAt", user.getCreatedAt());
+        profile.put("updatedAt", user.getUpdatedAt());
+        profile.put("isFollowing", false);
+        profile.put("postCount", getPostCount(userId));
+        profile.put("followersCount", getFollowersCount(userId));
+        profile.put("followingCount", getFollowingCount(userId));
+        profile.put("isAdminUser", user.getIsAdmin());
 
         boolean isFollowing = false;
         if (currentUser != null && !currentUser.getId().equals(userId)) {
