@@ -83,6 +83,7 @@ public class ConversationService {
         // Create conversation
         Conversation conversation = Conversation.builder()
                 .type(request.getType())
+                .name(request.getType() == ConversationType.ROOM ? request.getName() : null)
                 .participants(participants)
                 .build();
 

@@ -7,10 +7,12 @@ import com.ispilo.model.dto.request.SendMessageRequest;
 import com.ispilo.model.dto.response.MessageResponse;
 import com.ispilo.model.entity.Conversation;
 import com.ispilo.model.entity.Message;
+import com.ispilo.model.entity.MessageRead;
 import com.ispilo.model.entity.User;
 import com.ispilo.model.enums.MessageType;
 import com.ispilo.repository.ConversationRepository;
 import com.ispilo.repository.MessageRepository;
+import com.ispilo.repository.MessageReadRepository;
 import com.ispilo.repository.UserRepository;
 import com.ispilo.security.SecurityEncryptionService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,8 @@ public class MessageService {
     private final UserRepository userRepository;
     private final SecurityEncryptionService encryptionService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MessageReadRepository messageReadRepository;
+    private final AuditService auditService;
 
     @Transactional
     public MessageResponse sendMessage(String userId, SendMessageRequest request) {
@@ -132,22 +136,40 @@ public class MessageService {
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Message> messages = messageRepository.findByConversationId(conversationId, pageable);
+    Page<Message> messages = messageRepository.findByConversationId(conversationId, pageable);
 
         String conversationKey = conversation.getEncryptionKey();
 
-        return messages.map(message -> {
-            MessageResponse response = MessageResponse.fromEntity(message);
-            if (message.getContent() != null && conversationKey != null) {
-                try {
-                    response.setContent(encryptionService.decryptWithAES(message.getContent(), conversationKey));
-                } catch (Exception e) {
-                    log.error("Failed to decrypt message {}", message.getId(), e);
-                    response.setContent("[Encrypted message]");
-                }
-            }
-            return response;
-        });
+        List<MessageResponse> responses = messages.getContent().stream()
+                .filter(message -> message.getDeletedFor() == null || !message.getDeletedFor().contains(userId))
+                .map(message -> {
+                    MessageResponse response = MessageResponse.fromEntity(message);
+                    response.setDeletedForEveryone(Boolean.TRUE.equals(message.getDeletedForEveryone()));
+                    response.setDeletedForMe(false);
+                    response.setReadByCount(messageReadRepository.countByMessageId(message.getId()));
+
+                    if (Boolean.TRUE.equals(message.getDeletedForEveryone())) {
+                        response.setContent("[deleted]");
+                        response.setMediaUrl(null);
+                        response.setReactions(new java.util.HashMap<>());
+                        response.setIsRead(messageReadRepository.existsByMessageIdAndUserId(message.getId(), userId));
+                        return response;
+                    }
+
+                    if (message.getContent() != null && conversationKey != null) {
+                        try {
+                            response.setContent(encryptionService.decryptWithAES(message.getContent(), conversationKey));
+                        } catch (Exception e) {
+                            log.error("Failed to decrypt message {}", message.getId(), e);
+                            response.setContent("[Encrypted message]");
+                        }
+                    }
+                    response.setIsRead(messageReadRepository.existsByMessageIdAndUserId(message.getId(), userId));
+                    return response;
+                })
+                .toList();
+
+        return new org.springframework.data.domain.PageImpl<>(responses, pageable, messages.getTotalElements());
     }
 
     @Transactional
@@ -162,15 +184,20 @@ public class MessageService {
             throw new UnauthorizedException("User is not a participant in this conversation");
         }
 
-        List<Message> unreadMessages = messageRepository      
-                .findUnreadMessagesByConversationAndNotSender(conversationId, userId);      
+    List<Message> unreadMessages = messageRepository
+        .findUnreadMessagesByConversationAndNotSender(conversationId, userId);
 
-        unreadMessages.forEach(message -> {
-            message.setIsRead(true);
-            message.setStatus(com.ispilo.model.enums.MessageStatus.READ);
-            message.setReadAt(LocalDateTime.now());
-        });
-        messageRepository.saveAll(unreadMessages);
+    List<MessageRead> newReads = unreadMessages.stream()
+        .filter(message -> !messageReadRepository.existsByMessageAndUser(message, user))
+        .map(message -> MessageRead.builder()
+            .message(message)
+            .user(user)
+            .build())
+        .toList();
+
+    if (!newReads.isEmpty()) {
+        messageReadRepository.saveAll(newReads);
+    }
 
         notifyReadStatus(conversation, userId);
     }
@@ -207,7 +234,7 @@ public class MessageService {
     }
 
     @Transactional
-    public void deleteMessage(String userId, String messageId) {
+    public void deleteMessageForEveryone(String userId, String messageId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new NotFoundException("Message not found"));
 
@@ -215,7 +242,32 @@ public class MessageService {
             throw new UnauthorizedException("You can only delete your own messages");
         }
 
-        messageRepository.delete(message);
+        message.setDeletedForEveryone(true);
+        messageRepository.save(message);
+
+    auditService.logAction(userId, "MESSAGE_DELETE_FOR_EVERYONE", "Message", messageId,
+        java.util.Map.of(
+            "conversationId", message.getConversation().getId(),
+            "senderId", message.getSender().getId()
+        ));
+    }
+
+    @Transactional
+    public void deleteMessageForMe(String userId, String messageId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new NotFoundException("Message not found"));
+
+        if (message.getDeletedFor() == null) {
+            message.setDeletedFor(new java.util.HashSet<>());
+        }
+        message.getDeletedFor().add(userId);
+        messageRepository.save(message);
+
+    auditService.logAction(userId, "MESSAGE_DELETE_FOR_ME", "Message", messageId,
+        java.util.Map.of(
+            "conversationId", message.getConversation().getId(),
+            "senderId", message.getSender().getId()
+        ));
     }
 
     @Transactional

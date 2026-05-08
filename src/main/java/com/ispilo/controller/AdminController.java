@@ -4,6 +4,7 @@ import com.ispilo.exception.UnauthorizedException;
 import com.ispilo.model.dto.request.AdminPromoteRequest;
 import com.ispilo.model.dto.request.AdminReportReviewRequest;
 import com.ispilo.model.dto.response.AdminDashboardStatsResponse;
+import com.ispilo.model.dto.response.MessageExportResponse;
 import com.ispilo.model.dto.response.ReportResponse;
 import com.ispilo.model.entity.AuditLog;
 import com.ispilo.model.entity.User;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -83,5 +86,47 @@ public class AdminController {
             @Valid @RequestBody AdminReportReviewRequest request) {
         verifyAdmin(userDetails.getUsername());
         return ResponseEntity.ok(adminService.reviewSellerReport(reportId, request));
+    }
+
+    @PostMapping("/messages/{messageId}/restore-everyone")
+    public ResponseEntity<Void> restoreMessageForEveryone(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String messageId) {
+        verifyAdmin(userDetails.getUsername());
+        adminService.restoreMessageForEveryone(messageId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/messages/{messageId}/restore-for-user/{userId}")
+    public ResponseEntity<Void> restoreMessageForUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String messageId,
+            @PathVariable String userId) {
+        verifyAdmin(userDetails.getUsername());
+        adminService.restoreMessageForUser(messageId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/conversations/{conversationId}/restore-for-user/{userId}")
+    public ResponseEntity<Void> restoreConversationForUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String conversationId,
+            @PathVariable String userId) {
+        verifyAdmin(userDetails.getUsername());
+        adminService.restoreConversationForUser(conversationId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/conversations/{conversationId}/export")
+    public ResponseEntity<java.util.List<MessageExportResponse>> exportConversation(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String conversationId) {
+        verifyAdmin(userDetails.getUsername());
+        java.util.List<MessageExportResponse> payload = adminService.exportConversation(conversationId);
+        String filename = "conversation-" + conversationId + ".json";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .contentType(java.util.Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .body(payload);
     }
 }

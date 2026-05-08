@@ -19,6 +19,8 @@ public class CreateConversationRequest {
     @NotNull(message = "Conversation type is required")
     private ConversationType type;
 
+    private String name;
+
     @NotEmpty(message = "At least one participant is required")
     private List<String> participantIds;
 }

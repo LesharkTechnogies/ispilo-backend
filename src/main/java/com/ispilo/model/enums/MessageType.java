@@ -4,6 +4,8 @@ public enum MessageType {
     TEXT,
     IMAGE,
     VIDEO,
-    FILE
+    FILE,
+    VOICE,
+    STICKER
 }
 

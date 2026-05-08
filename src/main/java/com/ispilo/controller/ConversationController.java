@@ -226,7 +226,7 @@ public class ConversationController {
         log.info("Deleting message {} in conversation {} by user {}",
                 messageId, conversationId, userPrincipal.getId());
 
-        messageService.deleteMessage(userPrincipal.getId(), messageId);
+        messageService.deleteMessageForEveryone(userPrincipal.getId(), messageId);
         return ResponseEntity.noContent().build();
     }
 

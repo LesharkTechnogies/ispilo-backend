@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 public class ConversationResponse {
 
     private String id;
+    private String name;
     private ConversationType type;
     private List<UserResponse> participants;
     private String lastMessage;
@@ -29,6 +30,7 @@ public class ConversationResponse {
     public static ConversationResponse fromEntity(Conversation conversation) {
         return ConversationResponse.builder()
                 .id(conversation.getId())
+                .name(conversation.getName())
                 .type(conversation.getType())
                 .participants(conversation.getParticipants().stream()
                         .map(UserResponse::fromEntity)

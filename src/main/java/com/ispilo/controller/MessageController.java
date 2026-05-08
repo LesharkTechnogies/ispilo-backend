@@ -42,4 +42,20 @@ public class MessageController {
         String emoji = payload.get("emoji");
         return ResponseEntity.ok(messageService.reactToMessage(userPrincipal.getId(), messageId, emoji));
     }
+
+    @PostMapping("/{messageId}/delete-for-me")
+    public ResponseEntity<Void> deleteForMe(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable String messageId) {
+        messageService.deleteMessageForMe(userPrincipal.getId(), messageId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{messageId}/delete-for-everyone")
+    public ResponseEntity<Void> deleteForEveryone(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable String messageId) {
+        messageService.deleteMessageForEveryone(userPrincipal.getId(), messageId);
+        return ResponseEntity.noContent().build();
+    }
 }

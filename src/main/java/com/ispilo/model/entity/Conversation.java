@@ -34,6 +34,9 @@ public class Conversation {
     @Column(nullable = false)
     private ConversationType type;
 
+    @Column(name = "name")
+    private String name;
+
     @ManyToMany
     @JoinTable(
         name = "conversation_participants",

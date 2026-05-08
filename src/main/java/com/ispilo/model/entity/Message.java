@@ -8,6 +8,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "messages", indexes = {
@@ -91,6 +93,16 @@ public class Message {
     @Column(name = "is_deleted")
     @Builder.Default
     private Boolean isDeleted = false;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "message_deleted_for", joinColumns = @JoinColumn(name = "message_id"))
+    @Column(name = "user_id")
+    @Builder.Default
+    private Set<String> deletedFor = new HashSet<>();
+
+    @Column(name = "deleted_for_everyone")
+    @Builder.Default
+    private Boolean deletedForEveryone = false;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

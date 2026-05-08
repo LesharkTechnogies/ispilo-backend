@@ -25,9 +25,12 @@ public class MessageResponse {
     private String content;
     private String mediaUrl;
     private Boolean isRead;
+    private Long readByCount;
     private com.ispilo.model.enums.MessageStatus status;
     private String replyToMessageId;
     private java.util.Map<String, String> reactions;
+    private Boolean deletedForEveryone;
+    private Boolean deletedForMe;
     private LocalDateTime createdAt;
 
     public static MessageResponse fromEntity(Message message) {
@@ -42,9 +45,12 @@ public class MessageResponse {
                 .content(message.getContent())
                 .mediaUrl(message.getMediaUrl())
                 .isRead(message.getIsRead())
+                .readByCount(0L)
                 .status(message.getStatus())
                 .replyToMessageId(message.getReplyToMessage() != null ? message.getReplyToMessage().getId() : null)
                 .reactions(message.getReactions() != null ? new java.util.HashMap<>(message.getReactions()) : new java.util.HashMap<>())
+                .deletedForEveryone(Boolean.TRUE.equals(message.getDeletedForEveryone()))
+                .deletedForMe(false)
                 .createdAt(message.getCreatedAt())
                 .build();
     }

@@ -20,6 +20,8 @@ public interface MessageRepository extends JpaRepository<Message, String> {
 
     Page<Message> findByConversationId(String conversationId, Pageable pageable);
 
+    List<Message> findByConversationIdOrderByCreatedAtAsc(String conversationId);
+
     long countByConversationIdAndIsReadFalse(String conversationId);
 
     @Query("SELECT COUNT(m) FROM Message m WHERE m.conversation.id = :conversationId AND m.isRead = false AND m.sender.id != :userId")

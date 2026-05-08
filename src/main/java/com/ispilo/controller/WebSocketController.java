@@ -247,6 +247,35 @@ public class WebSocketController {
     }
 
     /**
+     * Delete message for me or everyone
+     * Path: /app/chat.delete
+     */
+    @MessageMapping("/chat.delete")
+    public void deleteMessage(
+            @Payload DeleteMessageRequest request,
+            SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+            if (auth == null) return;
+
+            String userId = resolveAuthenticatedUserId(auth);
+
+            if (Boolean.TRUE.equals(request.deleteForEveryone())) {
+                messageService.deleteMessageForEveryone(userId, request.messageId());
+            } else {
+                messageService.deleteMessageForMe(userId, request.messageId());
+            }
+
+            messagingTemplate.convertAndSend(
+                    "/topic/conversation/" + request.conversationId() + "/delete",
+                    new DeleteMessageEvent(request.messageId(), request.conversationId(), request.deleteForEveryone())
+            );
+        } catch (Exception e) {
+            log.error("Error deleting message", e);
+        }
+    }
+
+    /**
      * Send error message to client
      */
     private void sendError(SimpMessageHeaderAccessor headerAccessor, String errorMessage) {
@@ -259,6 +288,10 @@ public class WebSocketController {
             );
         }
     }
+
+    public record DeleteMessageRequest(String messageId, String conversationId, Boolean deleteForEveryone) {}
+
+    public record DeleteMessageEvent(String messageId, String conversationId, Boolean deletedForEveryone) {}
 
     private String resolveAuthenticatedUserId(UsernamePasswordAuthenticationToken auth) {
         Object principal = auth.getPrincipal();

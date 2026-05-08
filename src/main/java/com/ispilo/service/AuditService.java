@@ -33,6 +33,8 @@ public class AuditService {
                 user = userRepository.findById(userId).orElse(null);
             }
 
+            String simplifiedAction = simplifyAction(action);
+
             String ipAddress = "Unknown";
             String userAgent = "Unknown";
             String deviceInfo = "Unknown";
@@ -44,16 +46,13 @@ public class AuditService {
             // A more robust way is to pass these as arguments to the async method.
             
             // Construct the JSON details
-            String detailsJson = "{}";
-            if (details != null) {
-                detailsJson = objectMapper.writeValueAsString(details);
-            }
+        String detailsJson = buildDetailsJson(details, action, simplifiedAction);
 
             AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
                     .userEmail(user != null ? user.getEmail() : null)
                     .userPhone(user != null ? user.getPhone() : null)
-                    .action(action)
+            .action(simplifiedAction)
                     .resourceType(resourceType)
                     .resourceId(resourceId)
                     .details(detailsJson)
@@ -79,16 +78,15 @@ public class AuditService {
                 user = userRepository.findById(userId).orElse(null);
             }
 
-            String detailsJson = "{}";
-            if (details != null) {
-                detailsJson = objectMapper.writeValueAsString(details);
-            }
+            String simplifiedAction = simplifyAction(action);
+
+            String detailsJson = buildDetailsJson(details, action, simplifiedAction);
 
             AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
                     .userEmail(user != null ? user.getEmail() : null)
                     .userPhone(user != null ? user.getPhone() : null)
-                    .action(action)
+                    .action(simplifiedAction)
                     .resourceType(resourceType)
                     .resourceId(resourceId)
                     .details(detailsJson)
@@ -102,5 +100,44 @@ public class AuditService {
         } catch (Exception e) {
             log.error("Failed to save audit log", e);
         }
+    }
+
+    private String buildDetailsJson(Map<String, Object> details, String rawAction, String simplifiedAction) throws Exception {
+        Map<String, Object> payload = new java.util.HashMap<>();
+        if (details != null) {
+            payload.putAll(details);
+        }
+
+        if (rawAction != null && !rawAction.equals(simplifiedAction)) {
+            payload.put("rawAction", rawAction);
+        }
+
+        if (payload.isEmpty()) {
+            return "{}";
+        }
+        return objectMapper.writeValueAsString(payload);
+    }
+
+    private String simplifyAction(String action) {
+        if (action == null || action.isBlank()) {
+            return action;
+        }
+
+        String normalized = action.trim();
+        int queryIndex = normalized.indexOf('?');
+        if (queryIndex >= 0) {
+            normalized = normalized.substring(0, queryIndex);
+        }
+
+        if (normalized.startsWith("/")) {
+            String[] parts = normalized.split("/");
+            for (int i = parts.length - 1; i >= 0; i--) {
+                if (!parts[i].isBlank()) {
+                    return parts[i];
+                }
+            }
+        }
+
+        return normalized;
     }
 }
