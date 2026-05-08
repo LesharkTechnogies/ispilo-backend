@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.ispilo.repository.GroupPostRepository;
+import com.ispilo.model.entity.GroupPost;
+
 @Service
 @RequiredArgsConstructor
 public class PostService {
@@ -36,6 +39,10 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final NotificationService notificationService;
     private final UserFollowRepository userFollowRepository;
+    private final SmartFeedService smartFeedService;
+    private final PostInteractionService postInteractionService;
+    private final PostPublishingService postPublishingService;
+    private final GroupPostRepository groupPostRepository;
 
     private User resolveUser(String usernameOrPhoneOrEmail) {
         return userRepository.findByEmail(usernameOrPhoneOrEmail)
@@ -51,12 +58,14 @@ public class PostService {
     public Page<PostResponse> getFeed(String username, Pageable pageable) {
         User user = resolveUser(username);
 
-        List<User> followingUsers = userFollowRepository.findAllByFollower(user).stream()
-                .map(UserFollow::getFollowing)
+        // 1. Generate Highly Optimized Smart Feed (Facebook-Style Ranking)
+        List<Post> rankedPosts = smartFeedService.getRankedFeedForUser(user.getId(), pageable.getPageNumber(), pageable.getPageSize());
+        
+        List<PostResponse> responses = rankedPosts.stream()
+                .map(post -> toPostResponse(post, user))
                 .collect(Collectors.toList());
-
-        return postRepository.findAllByUserIn(followingUsers, pageable)
-                .map(post -> toPostResponse(post, user));
+                
+        return new org.springframework.data.domain.PageImpl<>(responses, pageable, 1000); // 1000 is dummy total for infinite scroll
     }
 
     public Page<PostResponse> getUserPosts(String userId, Pageable pageable) {
@@ -98,6 +107,10 @@ public class PostService {
         List<UserFollow> followers = userFollowRepository.findByFollowing(user);
         List<User> followersToNotify = followers.stream().map(UserFollow::getFollower).collect(Collectors.toList());
         notificationService.sendPushNotifications(followersToNotify, "New Post", user.getName() + " just shared a new post.", "NEW_POST", post.getId());
+
+        // Fan-out delivery: Sync new post directly to active followers' WebSockets immediately
+        List<String> followerIds = followersToNotify.stream().map(User::getId).collect(Collectors.toList());
+        postPublishingService.syncNewPostToFeeds(post, followerIds);
 
     return toPostResponse(post, user);
     }
@@ -150,27 +163,58 @@ public class PostService {
 
     @Transactional
     public PostResponse toggleLike(String username, String postId) {
-        Post post = postRepository.findByIdWithLock(postId)
-                .orElseThrow(() -> new NotFoundException("Post not found"));
-
     User authUser = resolveUser(username);
         
-        Optional<PostLike> existingLike = postLikeRepository.findByUserAndPost(authUser, post);
+        // Delegate to high-concurrency event-driven Atomic Interaction Service
+        postInteractionService.toggleLike(postId, authUser.getId());
+        
+        // Fetch the atomically updated state without persisting hibernate memory state over it
+        Post post = postRepository.findById(postId).orElseThrow();
 
-        if (existingLike.isPresent()) {
-            postLikeRepository.delete(existingLike.get());
-            int current = (post.getLikesCount() == null ? 0 : post.getLikesCount());
-            post.setLikesCount(Math.max(0, current - 1));
-        } else {
-            PostLike newLike = PostLike.builder()
-                    .user(authUser)
-                    .post(post)
-                    .build();
-            postLikeRepository.save(newLike);
-            post.setLikesCount((post.getLikesCount() == null ? 0 : post.getLikesCount()) + 1);
-        }
+    return toPostResponse(post, authUser);
+    }
 
-    return toPostResponse(postRepository.save(post), authUser);
+    @Transactional
+    public PostResponse sharePost(String username, String postId, CreatePostRequest request) {
+        User authUser = resolveUser(username);
+        postInteractionService.sharePost(postId, authUser.getId());
+        Post originalPost = postRepository.findById(postId).orElseThrow(() -> new NotFoundException("Post not found"));
+
+        String content = request != null ? request.getActualContent() : "";
+        Post sharedPost = Post.builder()
+                .user(authUser)
+                .content(content)
+                .description(content)
+                .sharedFromPost(originalPost)
+                .mediaUrls(new java.util.ArrayList<>())
+                .ctaButtons(new java.util.ArrayList<>())
+                .comments(new java.util.ArrayList<>())
+                .build();
+
+        sharedPost = postRepository.save(sharedPost);
+        return toPostResponse(sharedPost, authUser);
+    }
+
+    @Transactional
+    public PostResponse shareGroupPost(String username, String groupId, String postId, CreatePostRequest request) {
+        User authUser = resolveUser(username);
+        GroupPost originalGroupPost = groupPostRepository.findById(postId)
+                .filter(gp -> gp.getGroup() != null && gp.getGroup().getId().equals(groupId))
+                .orElseThrow(() -> new NotFoundException("Group post not found"));
+
+        String content = request != null ? request.getActualContent() : "";
+        Post sharedPost = Post.builder()
+                .user(authUser)
+                .content(content)
+                .description(content)
+                .sharedFromGroupPost(originalGroupPost)
+                .mediaUrls(new java.util.ArrayList<>())
+                .ctaButtons(new java.util.ArrayList<>())
+                .comments(new java.util.ArrayList<>())
+                .build();
+
+        sharedPost = postRepository.save(sharedPost);
+        return toPostResponse(sharedPost, authUser);
     }
 
     @Transactional

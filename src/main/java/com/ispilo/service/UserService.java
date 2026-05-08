@@ -33,6 +33,7 @@ public class UserService {
     private final PostRepository postRepository;
     private final MediaService mediaService;
     private final PasswordEncoder passwordEncoder;
+    private final StoryService storyService;
 
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
@@ -250,11 +251,15 @@ public class UserService {
     /**
      * Delete user account
      */
+    @org.springframework.transaction.annotation.Transactional
     public void deleteAccount(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        // TODO: Implement soft delete or full delete with cascade
+        // Delete all stories natively from Cloudinary and DB
+        storyService.deleteAllUserStories(user.getId());
+
+        // Delete user (cascades to posts and comments)
         userRepository.delete(user);
         log.info("Deleted account for user: {}", email);
     }

@@ -25,7 +25,7 @@ public class GroupPostLike {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
-    private PostEntity post;
+    private GroupPost post;
 
     private Instant createdAt;
 }

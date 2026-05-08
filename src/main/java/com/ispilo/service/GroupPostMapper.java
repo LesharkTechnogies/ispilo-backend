@@ -1,7 +1,7 @@
 package com.ispilo.service;
 
 import com.ispilo.model.dto.response.GroupPostResponse;
-import com.ispilo.model.entity.PostEntity;
+import com.ispilo.model.entity.GroupPost;
 import com.ispilo.repository.GroupPostLikeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,7 +12,7 @@ public class GroupPostMapper {
 
     private final GroupPostLikeRepository groupPostLikeRepository;
 
-    public GroupPostResponse toDto(PostEntity p, boolean callerIsAdmin) {
+    public GroupPostResponse toDto(GroupPost p, boolean callerIsAdmin) {
         GroupPostResponse r = new GroupPostResponse();
         r.setId(p.getId());
         r.setText(p.getText());

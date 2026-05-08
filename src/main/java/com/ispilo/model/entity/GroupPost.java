@@ -13,7 +13,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PostEntity {
+public class GroupPost {
     @Id
     private String id;
 

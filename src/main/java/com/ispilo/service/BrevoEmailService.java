@@ -30,6 +30,7 @@ public class BrevoEmailService {
     @Value("${brevo.sender-name:Ispilo}")
     private String senderName;
 
+    @org.springframework.scheduling.annotation.Async
     public void sendForgotPasswordCode(String recipientEmail, String recipientName, String code, long ttlMinutes) {
         if (brevoApiKey == null || brevoApiKey.isBlank()) {
             throw new BadRequestException("Email service is not configured");

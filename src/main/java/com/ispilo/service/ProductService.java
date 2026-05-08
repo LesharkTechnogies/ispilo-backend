@@ -7,9 +7,21 @@ import com.ispilo.model.dto.request.AddReviewRequest;
 import com.ispilo.model.dto.response.PageResponse;
 import com.ispilo.model.dto.response.ProductResponse;
 import com.ispilo.model.entity.Product;
+import com.ispilo.model.entity.ProductReview;
+import com.ispilo.model.entity.ProductReviewReaction;
+import com.ispilo.model.entity.ProductReport;
 import com.ispilo.model.entity.Seller;
 import com.ispilo.model.entity.User;
+import com.ispilo.model.enums.SellerVerificationLevel;
+import com.ispilo.model.enums.ReviewReactionType;
+import com.ispilo.model.dto.response.ProductReviewResponse;
+import com.ispilo.model.dto.request.CreateReportRequest;
+import com.ispilo.model.dto.response.ReportResponse;
 import com.ispilo.repository.ProductRepository;
+import com.ispilo.repository.ProductReviewReactionRepository;
+import com.ispilo.repository.ProductReviewRepository;
+import com.ispilo.repository.ProductReportRepository;
+import com.ispilo.service.BannedDeviceCacheService;
 import com.ispilo.repository.SellerRepository;
 import com.ispilo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -34,8 +47,19 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductReviewRepository productReviewRepository;
+    private final ProductReviewReactionRepository productReviewReactionRepository;
+    private final ProductReportRepository productReportRepository;
+    private final BannedDeviceCacheService bannedDeviceCacheService;
     private final SellerRepository sellerRepository;
     private final UserRepository userRepository;
+
+    private static final List<String> FLAGGED_WORDS = List.of(
+        "scum",
+        "ameniosha",
+        "mwizi",
+        "flag"
+    );
 
     /**
      * Get all products with pagination
@@ -87,6 +111,14 @@ public class ProductService {
     }
 
     /**
+     * Get products by seller verification level
+     */
+    public PageResponse<?> getProductsBySellerVerificationLevel(SellerVerificationLevel level, Pageable pageable) {
+        Page<Product> page = productRepository.findBySellerVerificationLevel(level, pageable);
+        return buildPageResponse(page);
+    }
+
+    /**
      * Get trending products sorted by rating
      */
     public PageResponse<?> getTrendingProducts(Pageable pageable) {
@@ -111,6 +143,46 @@ public class ProductService {
         } else {
             seller = sellerRepository.findByUserId(user.getId())
                     .orElseThrow(() -> new BadRequestException("User is not a seller. Please register as seller first."));
+        }
+
+        if (seller.getUploadBlockedUntil() != null && seller.getUploadBlockedUntil().isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("Seller is temporarily blocked from uploading products.");
+        }
+
+        // Apply seller verification limits
+        if (!isAdmin) {
+            if (seller.getVerificationLevel() == com.ispilo.model.enums.SellerVerificationLevel.UNVERIFIED) {
+                long activeCount = productRepository.countBySellerId(seller.getId());
+                if (activeCount >= 3) {
+                    throw new BadRequestException("Unverified sellers can only post up to 3 products. Please verify your ID or delete older products.");
+                }
+            } else if (seller.getVerificationLevel() == com.ispilo.model.enums.SellerVerificationLevel.ID_VERIFIED) {
+                LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
+                long weekCount = productRepository.countBySellerIdAndCreatedAtAfter(seller.getId(), oneWeekAgo);
+                if (weekCount >= 10) {
+                    throw new BadRequestException("ID verified sellers can only post up to 10 products per week. Please wait or upgrade your account to a Fully Verified Shop.");
+                }
+            }
+        }
+
+        // Calculate Expiry Date based on verification level
+        LocalDateTime expiresAt = null;
+        if (seller.getVerificationLevel() == com.ispilo.model.enums.SellerVerificationLevel.FULLY_VERIFIED) {
+            expiresAt = LocalDateTime.now().plusMonths(1);
+        } else {
+            expiresAt = LocalDateTime.now().plusWeeks(1);
+        }
+
+        // Device Security Flag
+        if (request.deviceId() != null && !request.deviceId().trim().isEmpty()) {
+            if (bannedDeviceCacheService.isBanned(request.deviceId())) {
+                throw new BadRequestException("This device is banned from using marketplace services.");
+            }
+            boolean deviceUsedByOthers = productRepository.existsByDeviceIdAndSellerIdNot(request.deviceId(), seller.getId());
+            if (deviceUsedByOthers) {
+                log.warn("SECURITY ALERT: Device ID {} used by Seller {} was previously used by another seller account. Flagging for review.", request.deviceId(), seller.getId());
+                // In a production scenario, you could suspend the account or send a Brevo email to the admin here.
+            }
         }
 
         // Validate product data
@@ -141,6 +213,8 @@ public class ProductService {
                 .stockQuantity(request.stockQuantity() != null ? request.stockQuantity() : 0)
                 .isAvailable(true)
                 .isFeatured(false)
+                .expiresAt(expiresAt)
+                .deviceId(request.deviceId())
                 .seller(seller)
                 .build();
 
@@ -359,8 +433,10 @@ public class ProductService {
             response.put("seller", sellerInfo);
         }
 
-        // TODO: Get reviews (when Review entity is created)
-        response.put("reviews", new ArrayList<>());
+    response.put("reviews", productReviewRepository.findTop5ByProductIdOrderByCreatedAtDesc(productId)
+        .stream()
+        .map(ProductReviewResponse::fromEntity)
+        .collect(Collectors.toList()));
 
         // TODO: Get ratings breakdown
         response.put("ratings", new HashMap<>());
@@ -399,39 +475,188 @@ public class ProductService {
             throw new NotFoundException("Product not found");
         }
 
-        // TODO: Implement Review entity and repository
-        // For now, return empty list
-        return PageResponse.builder()
-                .content(new ArrayList<>())
-                .page(pageable.getPageNumber())
-                .size(pageable.getPageSize())
-                .totalElements(0)
-                .totalPages(0)
-                .last(true)
-                .build();
+    Page<ProductReview> page = productReviewRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable);
+    return PageResponse.builder()
+        .content(page.getContent().stream()
+            .map(ProductReviewResponse::fromEntity)
+            .collect(Collectors.toList()))
+        .page(page.getNumber())
+        .size(page.getSize())
+        .totalElements(page.getTotalElements())
+        .totalPages(page.getTotalPages())
+        .last(page.isLast())
+        .build();
     }
 
     /**
      * Add review to product
      */
-    public Map<String, Object> addProductReview(String username, String productId, AddReviewRequest request) {
+    public ProductReviewResponse addProductReview(String username, String productId, AddReviewRequest request) {
         User user = userRepository.findByEmail(username)
                 .orElseGet(() -> userRepository.findByPhone(username)
                         .orElseThrow(() -> new NotFoundException("User not found")));
 
-        if (!productRepository.existsById(productId)) {
-            throw new NotFoundException("Product not found");
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found"));
+
+        if (product.getSeller() != null && product.getSeller().getUser() != null
+                && product.getSeller().getUser().getId().equals(user.getId())) {
+            throw new BadRequestException("Sellers cannot review their own products");
         }
 
-        // TODO: Create Review entity and save to database
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", "review-" + System.currentTimeMillis());
-        response.put("rating", request.getRating());
-        response.put("comment", request.getComment());
-        response.put("reviewer", user.getName());
-        response.put("createdAt", new java.util.Date());
+        if (productReviewRepository.existsByProductAndUser(product, user)) {
+            throw new BadRequestException("You have already reviewed this product");
+        }
+
+        ProductReview review = ProductReview.builder()
+                .product(product)
+                .user(user)
+                .rating(request.getRating())
+                .comment(request.getComment())
+                .title(request.getTitle())
+                .wouldRecommend(request.getWouldRecommend())
+                .build();
+
+    applyReviewFlagging(review);
+
+        review = productReviewRepository.save(review);
+
+    if (Boolean.TRUE.equals(review.getIsFlagged())) {
+        ProductReport autoReport = ProductReport.builder()
+            .product(product)
+            .seller(product.getSeller())
+            .reporter(user)
+            .reason("AUTO_FLAGGED_REVIEW")
+            .description("Review flagged for: " + review.getFlagReason())
+            .build();
+        productReportRepository.save(autoReport);
+    }
+
+        updateProductRating(product);
 
         log.info("Review added to product {} by user {}", productId, user.getId());
-        return response;
+        return ProductReviewResponse.fromEntity(review);
+    }
+
+    public ReportResponse reportProduct(String username, String productId, CreateReportRequest request) {
+    User user = userRepository.findByEmail(username)
+        .orElseGet(() -> userRepository.findByPhone(username)
+            .orElseThrow(() -> new NotFoundException("User not found")));
+
+    Product product = productRepository.findById(productId)
+        .orElseThrow(() -> new NotFoundException("Product not found"));
+
+    Seller seller = product.getSeller();
+    if (seller == null) {
+        throw new BadRequestException("Product seller not found for report");
+    }
+
+    ProductReport report = ProductReport.builder()
+        .product(product)
+        .seller(seller)
+        .reporter(user)
+        .reason(request.getReason())
+        .description(request.getDescription())
+        .build();
+
+    report = productReportRepository.save(report);
+
+    return ReportResponse.builder()
+        .id(report.getId())
+        .targetId(product.getId())
+        .targetType("PRODUCT")
+        .reason(report.getReason())
+        .description(report.getDescription())
+        .status(report.getStatus())
+        .createdAt(report.getCreatedAt())
+        .build();
+    }
+
+    /**
+     * Like or dislike a product review
+     */
+    public ProductReviewResponse reactToProductReview(String username, String reviewId, ReviewReactionType reactionType) {
+        User user = userRepository.findByEmail(username)
+                .orElseGet(() -> userRepository.findByPhone(username)
+                        .orElseThrow(() -> new NotFoundException("User not found")));
+
+        ProductReview review = productReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NotFoundException("Review not found"));
+
+        ProductReviewReaction existing = productReviewReactionRepository.findByReviewAndUser(review, user)
+                .orElse(null);
+
+        if (existing != null && existing.getReactionType() == reactionType) {
+            applyReviewReactionDelta(review, reactionType, -1);
+            productReviewReactionRepository.delete(existing);
+        } else if (existing != null) {
+            applyReviewReactionDelta(review, existing.getReactionType(), -1);
+            existing.setReactionType(reactionType);
+            productReviewReactionRepository.save(existing);
+            applyReviewReactionDelta(review, reactionType, 1);
+        } else {
+            ProductReviewReaction reaction = ProductReviewReaction.builder()
+                    .review(review)
+                    .user(user)
+                    .reactionType(reactionType)
+                    .build();
+            productReviewReactionRepository.save(reaction);
+            applyReviewReactionDelta(review, reactionType, 1);
+        }
+
+        productReviewRepository.save(review);
+        updateProductRating(review.getProduct());
+
+        return ProductReviewResponse.fromEntity(review);
+    }
+
+    private void applyReviewReactionDelta(ProductReview review, ReviewReactionType reactionType, int delta) {
+        if (reactionType == ReviewReactionType.LIKE) {
+            int next = Math.max(0, (review.getLikeCount() == null ? 0 : review.getLikeCount()) + delta);
+            review.setLikeCount(next);
+        } else {
+            int next = Math.max(0, (review.getDislikeCount() == null ? 0 : review.getDislikeCount()) + delta);
+            review.setDislikeCount(next);
+        }
+    }
+
+    private void updateProductRating(Product product) {
+        String productId = product.getId();
+        Double averageRating = productReviewRepository.calculateAverageRating(productId);
+        Long likeSum = productReviewRepository.sumLikeCount(productId);
+        Long dislikeSum = productReviewRepository.sumDislikeCount(productId);
+
+        double baseRating = averageRating != null ? averageRating : 4.5;
+        long likes = likeSum != null ? likeSum : 0;
+        long dislikes = dislikeSum != null ? dislikeSum : 0;
+        double adjustment = (likes - dislikes) * 0.02;
+
+        double rating = clampRating(baseRating + adjustment);
+        product.setRating(rating);
+        product.setReviewCount((int) productReviewRepository.countByProductId(productId));
+        productRepository.save(product);
+    }
+
+    private void applyReviewFlagging(ProductReview review) {
+        String comment = review.getComment() == null ? "" : review.getComment().toLowerCase();
+        for (String word : FLAGGED_WORDS) {
+            if (comment.contains(word)) {
+                review.setIsFlagged(true);
+                review.setFlagReason("FLAGGED_WORD:" + word);
+                return;
+            }
+        }
+        review.setIsFlagged(false);
+        review.setFlagReason(null);
+    }
+
+    private double clampRating(double rating) {
+        if (rating < 1.0) {
+            return 1.0;
+        }
+        if (rating > 5.0) {
+            return 5.0;
+        }
+        return Math.round(rating * 10.0) / 10.0;
     }
 }

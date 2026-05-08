@@ -1,6 +1,7 @@
 package com.ispilo.security;
 
 import com.ispilo.repository.AppCredentialsRepository;
+import com.ispilo.service.BannedDeviceCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class AppRegistrationService {
 
     private final SecurityEncryptionService encryptionService;
     private final AppCredentialsRepository appCredentialsRepository;
+    private final BannedDeviceCacheService bannedDeviceCacheService;
 
     // Server's RSA key pair (should be generated once at startup and stored securely)
     private static KeyPair serverKeyPair;
@@ -54,6 +56,10 @@ public class AppRegistrationService {
         String deviceId = (request.getDeviceId() == null || request.getDeviceId().isBlank())
             ? "device-" + UUID.randomUUID()
             : request.getDeviceId();
+
+        if (bannedDeviceCacheService.isBanned(deviceId)) {
+            throw new RuntimeException("Device is banned");
+        }
 
         String deviceName = defaultValue(request.getDeviceName(), "unknown");
         String osVersion = defaultValue(request.getOsVersion(), "unknown");

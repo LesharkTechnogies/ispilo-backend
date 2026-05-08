@@ -43,5 +43,6 @@ public record CreateProductRequest(
     String category,
     String condition,
     String location,
-    String sellerId
+    String sellerId,
+    String deviceId
 ) {}

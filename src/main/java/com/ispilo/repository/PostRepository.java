@@ -21,13 +21,23 @@ public interface PostRepository extends JpaRepository<Post, String> {
     @Query("SELECT p FROM Post p WHERE p.id = :postId")
     java.util.Optional<Post> findByIdWithLock(@Param("postId") String postId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"user"})
     Page<Post> findByUserId(String userId, Pageable pageable);
 
     long countByUserId(String userId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"user"})
     Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"user"})
     Page<Post> findAllByUserIn(List<com.ispilo.model.entity.User> users, Pageable pageable);
+
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"user"})
+        Page<Post> findByUserInAndCreatedAtAfter(List<com.ispilo.model.entity.User> users, java.time.LocalDateTime createdAt, Pageable pageable);
+
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"user"})
+        @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY (COALESCE(p.likesCount,0) + COALESCE(p.commentsCount,0) * 2 + COALESCE(p.sharesCount,0) * 3) DESC")
+        Page<Post> findTrendingPosts(@Param("since") java.time.LocalDateTime since, Pageable pageable);
 
     // Using named parameters (:viewedPostIds) ensures the collection is handled safely by Hibernate
     @Query(value = "SELECT p.* FROM posts p " +

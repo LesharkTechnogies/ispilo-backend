@@ -102,7 +102,22 @@ public class PostController {
         return ResponseEntity.ok(feedService.getPersonalizedFeed(userDetails.getUsername(), pageable));
     }
 
-    @PostMapping("/{postId}/track-view")
+    @PostMapping("/{postId}/share")
+    public ResponseEntity<PostResponse> sharePost(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String postId,
+            @RequestBody(required = false) com.ispilo.model.dto.request.CreatePostRequest request) {
+        return ResponseEntity.ok(postService.sharePost(userDetails.getUsername(), postId, request));
+    }
+
+    @PostMapping("/groups/{groupId}/posts/{postId}/share")
+    public ResponseEntity<PostResponse> shareGroupPost(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String groupId,
+            @PathVariable String postId,
+            @RequestBody(required = false) com.ispilo.model.dto.request.CreatePostRequest request) {
+        return ResponseEntity.ok(postService.shareGroupPost(userDetails.getUsername(), groupId, postId, request));
+    }
     public ResponseEntity<Void> trackView(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String postId,

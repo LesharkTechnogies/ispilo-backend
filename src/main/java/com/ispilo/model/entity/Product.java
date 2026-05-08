@@ -82,6 +82,12 @@ public class Product {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    @Column(name = "device_id")
+    private String deviceId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

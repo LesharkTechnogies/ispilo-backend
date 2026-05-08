@@ -55,9 +55,21 @@ public class Post {
     @Builder.Default
     private Integer commentsCount = 0;
 
+    @Column(name = "shares_count")
+    @Builder.Default
+    private Integer sharesCount = 0;
+
     @Column(name = "view_count")
     @Builder.Default
     private Integer viewCount = 0;
+
+    @Column(name = "engagement_velocity")
+    @Builder.Default
+    private Double engagementVelocity = 0.0;
+
+    @Column(name = "score_cache")
+    @Builder.Default
+    private Double scoreCache = 0.0;
 
     @Column(name = "is_liked")
     @Builder.Default
@@ -85,6 +97,14 @@ public class Post {
     @OrderBy("createdAt DESC")
     @Builder.Default
     private List<Comment> comments = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shared_from_post_id")
+    private Post sharedFromPost;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shared_from_group_post_id")
+    private GroupPost sharedFromGroupPost;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

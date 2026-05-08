@@ -52,4 +52,15 @@ public interface ProductRepository extends JpaRepository<Product, String> {
      */
     @Query("SELECT p FROM Product p WHERE p.price BETWEEN :minPrice AND :maxPrice")
     Page<Product> findByPriceRange(@Param("minPrice") java.math.BigDecimal minPrice, @Param("maxPrice") java.math.BigDecimal maxPrice, Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.seller.verificationLevel = :level")
+    Page<Product> findBySellerVerificationLevel(@Param("level") com.ispilo.model.enums.SellerVerificationLevel level, Pageable pageable);
+
+    long countBySellerId(String sellerId);
+
+    long countBySellerIdAndCreatedAtAfter(String sellerId, java.time.LocalDateTime date);
+
+    List<Product> findByExpiresAtBefore(java.time.LocalDateTime date);
+
+    boolean existsByDeviceIdAndSellerIdNot(String deviceId, String sellerId);
 }

@@ -44,6 +44,39 @@ public class Seller {
     @Column(name = "business_address")
     private String businessAddress;
 
+    @Column(name = "verification_level")
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private com.ispilo.model.enums.SellerVerificationLevel verificationLevel = com.ispilo.model.enums.SellerVerificationLevel.UNVERIFIED;
+
+    @Column(name = "verification_status")
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private com.ispilo.model.enums.VerificationStatus verificationStatus = com.ispilo.model.enums.VerificationStatus.NONE;
+
+    @Column(name = "requested_verification_level")
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private com.ispilo.model.enums.SellerVerificationLevel requestedVerificationLevel = com.ispilo.model.enums.SellerVerificationLevel.UNVERIFIED;
+
+    @Column(name = "national_id_image")
+    private String nationalIdImage;
+
+    @Column(name = "verified_phone")
+    private String verifiedPhone;
+
+    @Column(name = "verified_full_name")
+    private String verifiedFullName;
+
+    @Column(name = "business_pin")
+    private String businessPin;
+
+    @ElementCollection
+    @CollectionTable(name = "seller_other_documents", joinColumns = @JoinColumn(name = "seller_id"))
+    @Column(name = "document_url")
+    @Builder.Default
+    private List<String> otherDocuments = new ArrayList<>();
+
     @Column(name = "is_verified")
     @Builder.Default
     private Boolean isVerified = false;
@@ -54,6 +87,16 @@ public class Seller {
     @Column(name = "rating", columnDefinition = "DECIMAL(3,1) DEFAULT 4.5")
     @Builder.Default
     private Double rating = 4.5;
+
+    @Column(name = "is_flagged")
+    @Builder.Default
+    private Boolean isFlagged = false;
+
+    @Column(name = "upload_blocked_until")
+    private LocalDateTime uploadBlockedUntil;
+
+    @Column(name = "upload_block_reason", length = 200)
+    private String uploadBlockReason;
 
     @Column(name = "total_sales")
     @Builder.Default

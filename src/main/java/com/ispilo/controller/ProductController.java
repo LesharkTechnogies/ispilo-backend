@@ -3,10 +3,15 @@ package com.ispilo.controller;
 import com.ispilo.exception.NotFoundException;
 import com.ispilo.model.dto.request.CreateProductRequest;
 import com.ispilo.model.dto.request.AddReviewRequest;
+import com.ispilo.model.dto.request.CreateReportRequest;
 import com.ispilo.model.dto.response.MediaUploadResponse;
 import com.ispilo.model.dto.response.PageResponse;
 import com.ispilo.model.dto.response.ProductResponse;
+import com.ispilo.model.dto.response.ProductReviewResponse;
+import com.ispilo.model.dto.response.ReportResponse;
 import com.ispilo.model.entity.User;
+import com.ispilo.model.enums.SellerVerificationLevel;
+import com.ispilo.model.enums.ReviewReactionType;
 import com.ispilo.repository.UserRepository;
 import com.ispilo.service.MediaService;
 import com.ispilo.service.ProductService;
@@ -111,6 +116,17 @@ public class ProductController {
         return ResponseEntity.ok(productService.getFeaturedProducts(pageable));
     }
 
+    @GetMapping("/seller-level/{level}")
+    @Operation(summary = "Get products by seller verification level")
+    public ResponseEntity<PageResponse<?>> getProductsBySellerLevel(
+            @PathVariable String level,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        SellerVerificationLevel parsedLevel = parseSellerVerificationLevel(level);
+        return ResponseEntity.ok(productService.getProductsBySellerVerificationLevel(parsedLevel, pageable));
+    }
+
     @GetMapping("/trending")
     @Operation(summary = "Get trending products by rating")
     public ResponseEntity<PageResponse<?>> getTrendingProducts(
@@ -196,12 +212,66 @@ public class ProductController {
 
     @PostMapping("/{productId}/reviews")
     @Operation(summary = "Add review to product")
-    public ResponseEntity<?> addProductReview(
+    public ResponseEntity<ProductReviewResponse> addProductReview(
             @PathVariable String productId,
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody AddReviewRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productService.addProductReview(userDetails.getUsername(), productId, request));
+    }
+
+    @PostMapping("/reviews/{reviewId}/like")
+    @Operation(summary = "Like a product review")
+    public ResponseEntity<ProductReviewResponse> likeProductReview(
+            @PathVariable String reviewId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(productService.reactToProductReview(userDetails.getUsername(), reviewId, ReviewReactionType.LIKE));
+    }
+
+    @PostMapping("/reviews/{reviewId}/dislike")
+    @Operation(summary = "Dislike a product review")
+    public ResponseEntity<ProductReviewResponse> dislikeProductReview(
+            @PathVariable String reviewId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(productService.reactToProductReview(userDetails.getUsername(), reviewId, ReviewReactionType.DISLIKE));
+    }
+
+    @PostMapping("/{productId}/reports")
+    @Operation(summary = "Report a product (also flags the attached seller)")
+    public ResponseEntity<ReportResponse> reportProduct(
+            @PathVariable String productId,
+            @Valid @RequestBody CreateReportRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(productService.reportProduct(userDetails.getUsername(), productId, request));
+    }
+
+    private SellerVerificationLevel parseSellerVerificationLevel(String level) {
+        if (level == null) {
+            throw new com.ispilo.exception.BadRequestException("Seller verification level is required");
+        }
+
+        String normalized = level.trim().toLowerCase();
+        switch (normalized) {
+            case "verified":
+            case "fully_verified":
+            case "fully-verified":
+            case "business":
+            case "verified-business":
+                return SellerVerificationLevel.FULLY_VERIFIED;
+            case "id_verified":
+            case "id-verified":
+            case "idverified":
+                return SellerVerificationLevel.ID_VERIFIED;
+            case "unverified":
+            case "non-verified":
+            case "nonverified":
+            case "normal":
+            case "basic":
+                return SellerVerificationLevel.UNVERIFIED;
+            default:
+                throw new com.ispilo.exception.BadRequestException("Invalid seller verification level: " + level);
+        }
     }
 
     public record MessageResponse(String message) {}

@@ -7,7 +7,7 @@ import com.ispilo.model.dto.response.GroupPostResponse;
 import com.ispilo.model.entity.GroupEntity;
 import com.ispilo.model.entity.GroupMembershipEntity;
 import com.ispilo.model.enums.GroupRole;
-import com.ispilo.model.entity.PostEntity;
+import com.ispilo.model.entity.GroupPost;
 import com.ispilo.model.entity.GroupPostLike;
 import com.ispilo.model.entity.User;
 import com.ispilo.repository.GroupMemberRepository;
@@ -52,7 +52,7 @@ public class GroupPostService {
                 .orElseThrow(() -> new UnauthorizedException("You are not a member of this group."));
 
         String postContent = request.getActualContent();
-        PostEntity post = PostEntity.builder()
+        GroupPost post = GroupPost.builder()
                 .id(UUID.randomUUID().toString())
                 .author(user)
                 .group(group)
@@ -100,7 +100,7 @@ public class GroupPostService {
         
         boolean isGroupAdmin = member.getRole() == GroupRole.ADMIN;
 
-        Page<PostEntity> posts = groupPostRepository.findByGroupOrderByCreatedAtDesc(group, pageable);
+        Page<GroupPost> posts = groupPostRepository.findByGroupOrderByCreatedAtDesc(group, pageable);
         
         return posts.map(post -> groupPostMapper.toDto(post, isGroupAdmin));
     }
@@ -108,7 +108,7 @@ public class GroupPostService {
     @Transactional
         public void deleteGroupPost(String username, String groupId, String postId) {
         User user = findUserByUsername(username);
-                PostEntity post = groupPostRepository.findByIdAndGroupIdWithLock(postId, groupId)
+                GroupPost post = groupPostRepository.findByIdAndGroupIdWithLock(postId, groupId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
         GroupEntity group = post.getGroup();
@@ -127,7 +127,7 @@ public class GroupPostService {
     @Transactional
         public GroupPostResponse toggleLike(String username, String groupId, String postId) {
         User user = findUserByUsername(username);
-                PostEntity post = groupPostRepository.findByIdAndGroupIdWithLock(postId, groupId)
+                GroupPost post = groupPostRepository.findByIdAndGroupIdWithLock(postId, groupId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
 
         GroupEntity group = post.getGroup();
@@ -162,3 +162,4 @@ public class GroupPostService {
                         .orElseThrow(() -> new NotFoundException("User not found")));
     }
 }
+

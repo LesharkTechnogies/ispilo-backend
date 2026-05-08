@@ -1,6 +1,7 @@
 
 package com.ispilo.model.dto.response;
 
+import com.ispilo.model.entity.GroupPost;
 import com.ispilo.model.entity.Post;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,12 +31,19 @@ public class PostResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private PostResponse sharedFromPost;
+    private GroupPostResponse sharedFromGroupPost;
+
     public static PostResponse fromEntity(Post post) {
         return fromEntity(post, false);
     }
 
     public static PostResponse fromEntity(Post post, boolean likedByCurrentUser) {
-        return PostResponse.builder()
+        return fromEntity(post, likedByCurrentUser, true);
+    }
+
+    public static PostResponse fromEntity(Post post, boolean likedByCurrentUser, boolean includeShared) {
+        PostResponse response = PostResponse.builder()
                 .id(post.getId())
                 .user(UserResponse.fromEntity(post.getUser()))
                 .content(post.getContent())
@@ -50,5 +58,29 @@ public class PostResponse {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+
+        if (includeShared && post.getSharedFromPost() != null) {
+            response.setSharedFromPost(fromEntity(post.getSharedFromPost(), false, false));
+        }
+
+        if (includeShared && post.getSharedFromGroupPost() != null) {
+            GroupPost gp = post.getSharedFromGroupPost();
+            GroupPostResponse gpr = new GroupPostResponse();
+            gpr.setId(gp.getId());
+            gpr.setText(gp.getText());
+            gpr.setMediaUrls(gp.getMediaUrls());
+            gpr.setAnonymous(gp.isAnonymous());
+            gpr.setCreatedAt(gp.getCreatedAt());
+            if (gp.getAuthor() != null && !gp.isAnonymous()) {
+                gpr.setAuthorId(gp.getAuthor().getId());
+                gpr.setAuthorName(gp.getAuthor().getName());
+            } else if (gp.isAnonymous()) {
+                gpr.setAuthorName("Anonymous");
+            }
+            response.setSharedFromGroupPost(gpr);
+        }
+
+        return response;
     }
 }
+

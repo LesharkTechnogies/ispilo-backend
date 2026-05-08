@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.Set;
 
 @Entity
-@Table(name = "groups")
+@Table(name = "app_groups")
 @Getter
 @Setter
 @NoArgsConstructor

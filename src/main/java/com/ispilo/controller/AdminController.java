@@ -2,7 +2,9 @@ package com.ispilo.controller;
 
 import com.ispilo.exception.UnauthorizedException;
 import com.ispilo.model.dto.request.AdminPromoteRequest;
+import com.ispilo.model.dto.request.AdminReportReviewRequest;
 import com.ispilo.model.dto.response.AdminDashboardStatsResponse;
+import com.ispilo.model.dto.response.ReportResponse;
 import com.ispilo.model.entity.AuditLog;
 import com.ispilo.model.entity.User;
 import com.ispilo.repository.UserRepository;
@@ -63,5 +65,23 @@ public class AdminController {
                 "userId", promotedUser.getId(),
                 "email", promotedUser.getEmail()
         ));
+    }
+
+    @PostMapping("/reports/products/{reportId}/review")
+    public ResponseEntity<ReportResponse> reviewProductReport(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String reportId,
+            @Valid @RequestBody AdminReportReviewRequest request) {
+        verifyAdmin(userDetails.getUsername());
+        return ResponseEntity.ok(adminService.reviewProductReport(reportId, request));
+    }
+
+    @PostMapping("/reports/sellers/{reportId}/review")
+    public ResponseEntity<ReportResponse> reviewSellerReport(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String reportId,
+            @Valid @RequestBody AdminReportReviewRequest request) {
+        verifyAdmin(userDetails.getUsername());
+        return ResponseEntity.ok(adminService.reviewSellerReport(reportId, request));
     }
 }

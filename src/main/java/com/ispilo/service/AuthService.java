@@ -1,5 +1,6 @@
 package com.ispilo.service;
 
+import com.ispilo.exception.BadRequestException;
 import com.ispilo.exception.ConflictException;
 import com.ispilo.exception.NotFoundException;
 import com.ispilo.exception.UnauthorizedException;
@@ -29,13 +30,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final BannedDeviceCacheService bannedDeviceCacheService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request, String deviceId) {
         log.info("Attempting to register user with email: {}", request.getEmail());
+
+        if (deviceId == null || deviceId.isBlank()) {
+            throw new BadRequestException("Device ID is required for registration");
+        }
+        if (bannedDeviceCacheService.isBanned(deviceId)) {
+            throw new UnauthorizedException("Device is banned from registering");
+        }
         
         if (userRepository.existsByEmail(request.getEmail())) {
             log.warn("Registration failed: Email {} already exists", request.getEmail());
@@ -90,8 +99,15 @@ public class AuthService {
         }
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String deviceId) {
         log.info("Attempting login for phone: {}", request.getPhone());
+
+        if (deviceId == null || deviceId.isBlank()) {
+            throw new BadRequestException("Device ID is required for login");
+        }
+        if (bannedDeviceCacheService.isBanned(deviceId)) {
+            throw new UnauthorizedException("Device is banned from using the app");
+        }
         
         try {
             // We need to find the user by phone first to get the email (username) for Spring Security
