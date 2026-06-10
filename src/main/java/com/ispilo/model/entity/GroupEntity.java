@@ -21,6 +21,10 @@ public class GroupEntity {
     private String description;
     private boolean isPrivate;
 
+    private String avatarUrl;
+    private String coverImageUrl;
+    private String slug;
+
     private Instant createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

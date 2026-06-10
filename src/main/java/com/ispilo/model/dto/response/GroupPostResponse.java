@@ -16,6 +16,7 @@ public class GroupPostResponse {
     // Visible to admins or non-anonymous posts
     private String authorId;
     private String authorName;
+    private String authorAvatar;
 
     private long likeCount;
 }

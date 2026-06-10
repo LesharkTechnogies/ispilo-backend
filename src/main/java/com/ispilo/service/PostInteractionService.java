@@ -9,6 +9,7 @@ import com.ispilo.model.entity.User;
 import com.ispilo.model.entity.PostLike;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,9 @@ public class PostInteractionService {
     private final PostLikeRepository postLikeRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;
+
+    private static final String POST_LIKES_KEY_PREFIX = "post:likes:";
 
     // Autonomous recovery: retries automatically if database transaction fails/locks
     @Retryable(retryFor = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
@@ -38,23 +42,22 @@ public class PostInteractionService {
         Post post = postRepository.findById(postId).orElseThrow();
         User user = userRepository.findById(userId).orElseThrow();
 
-        java.util.Optional<PostLike> existingLike = postLikeRepository.findByUserAndPost(user, post);
+        String redisKey = POST_LIKES_KEY_PREFIX + postId;
+        
+        java.util.Optional<PostLike> existingLike = postLikeRepository.findByUserIdAndPostId(userId, postId);
         boolean alreadyLiked = existingLike.isPresent();
 
         if (alreadyLiked) {
             postLikeRepository.delete(existingLike.get());
-            
-            // 2. Safely decrement count in DB atomically
             postMetricsRepository.decrementLikes(postId);
+            redisTemplate.opsForSet().remove(redisKey, userId); // Fast memory like removal
         } else {
             postLikeRepository.save(PostLike.builder().post(post).user(user).build());
-            
-            // 2. Safely increment count in DB atomically
             postMetricsRepository.incrementLikes(postId);
+            redisTemplate.opsForSet().add(redisKey, userId); // Fast memory like addition
         }
 
         // 3. EVENT-DRIVEN UI UPDATE: Broadcast live reaction change via STOMP WebSockets
-        // Frontend listens to: /topic/posts/{postId}/interactions
         messagingTemplate.convertAndSend(
             "/topic/posts/" + postId + "/interactions",
             Map.of("postId", postId, "action", alreadyLiked ? "UNLIKE" : "LIKE", "actorId", userId)
@@ -62,13 +65,24 @@ public class PostInteractionService {
         log.info("Broadcasted live interaction update for post {}", postId);
     }
 
+    public boolean isPostLikedByUser(String postId, String userId) {
+        String redisKey = POST_LIKES_KEY_PREFIX + postId;
+        Boolean isMember = redisTemplate.opsForSet().isMember(redisKey, userId);
+        if (Boolean.TRUE.equals(isMember)) {
+            return true;
+        }
+        // Fallback to DB if Redis key expired or missing
+        boolean dbLike = postLikeRepository.existsByUserIdAndPostId(userId, postId);
+        if (dbLike) {
+            redisTemplate.opsForSet().add(redisKey, userId);
+        }
+        return dbLike;
+    }
+
     @Retryable(retryFor = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
     @Transactional
     public void sharePost(String postId, String userId) {
-        // 1. Safely increment share count atomically
         postMetricsRepository.incrementShares(postId);
-
-        // 2. Broadcast live share update to all users viewing the post
         messagingTemplate.convertAndSend(
             "/topic/posts/" + postId + "/interactions",
             Map.of("postId", postId, "action", "SHARE", "actorId", userId)
@@ -76,12 +90,9 @@ public class PostInteractionService {
         log.info("Broadcasted live share update for post {}", postId);
     }
 
-    // Fallback method if the system crashes 3 times in a row (Prevents cascading failures)
     @Recover
     public void recoverInteraction(Exception e, String postId, String userId) {
         log.error("Failed to process interaction for post {} by user {} after 3 retries. Autonomous repair skipped. Error: {}", 
                   postId, userId, e.getMessage());
-        // At scale (Facebook), you would push this failed action to a Kafka/RabbitMQ Dead Letter Queue 
-        // so it eventually processes when the database recovers.
     }
 }

@@ -7,8 +7,10 @@ import com.ispilo.exception.UnauthorizedException;
 import com.ispilo.model.dto.request.LoginRequest;
 import com.ispilo.model.dto.request.RefreshTokenRequest;
 import com.ispilo.model.dto.request.RegisterRequest;
+import com.ispilo.model.dto.request.VerifyPhoneRequest;
 import com.ispilo.model.dto.response.AuthResponse;
 import com.ispilo.model.dto.response.RefreshTokenResponse;
+import com.ispilo.model.dto.response.RegistrationInitiatedResponse;
 import com.ispilo.model.dto.response.UserResponse;
 import com.ispilo.model.entity.User;
 import com.ispilo.repository.UserRepository;
@@ -34,9 +36,13 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
+    private final SmsService smsService;
+    private final SmsRateLimiterService smsRateLimiterService;
+    private final SecurityMonitoringService securityMonitoringService;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request, String deviceId) {
+    public RegistrationInitiatedResponse register(RegisterRequest request, String deviceId) {
         log.info("Attempting to register user with email: {}", request.getEmail());
 
         if (deviceId == null || deviceId.isBlank()) {
@@ -59,9 +65,6 @@ public class AuthService {
             String generatedUsername = request.getEmail().contains("@") ? 
                 request.getEmail().substring(0, request.getEmail().indexOf("@")) : request.getEmail();
             
-            // Ensure username is unique by potentially appending a short random string if needed later
-            // Here we assume simple prefix is enough
-            
             User user = User.builder()
                     .username(generatedUsername)
                     .email(request.getEmail())
@@ -73,23 +76,24 @@ public class AuthService {
                     .countryCode(request.getCountryCode())
                     .county(request.getCounty())
                     .town(request.getTown())
-                    .isEmailVerified(false) // Email verification pending
+                    .isEmailVerified(false)
                     .isPhoneVerified(false) // Phone verification pending
                     .build();
 
             userRepository.save(user);
             log.info("User registered successfully: {}", user.getId());
 
-            // TODO: Send verification email and SMS here (Asynchronous)
+            // Generate OTP and send async
+            String otp = otpService.generateAndSaveOtp(request.getPhone());
+            String message = "Your Ispilo verification code is: " + otp + ". It expires in 5 minutes.";
+            smsService.sendSms(request.getPhone(), message);
 
-            String token = jwtUtil.generateToken(user.getEmail());
-            String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
-
-            return AuthResponse.builder()
-                    .token(token)
-                    .refreshToken(refreshToken)
-                    .user(UserResponse.fromEntity(user))
+            return RegistrationInitiatedResponse.builder()
+                    .message("Verification code sent successfully")
+                    .phone(request.getPhone())
+                    .requiresVerification(true)
                     .build();
+
         } catch (DataIntegrityViolationException e) {
             log.error("Data integrity violation during registration for email {}: {}", request.getEmail(), e.getMessage());
             throw new ConflictException("A user with these details already exists.");
@@ -97,6 +101,55 @@ public class AuthService {
             log.error("Unexpected error during registration for email {}: {}", request.getEmail(), e.getMessage());
             throw new RuntimeException("Registration failed due to an internal error. Please try again.");
         }
+    }
+
+    @Transactional
+    public AuthResponse verifyPhone(VerifyPhoneRequest request) {
+        log.info("Verifying phone number: {}", request.getPhone());
+        
+        User user = userRepository.findByPhone(request.getPhone())
+                .orElseThrow(() -> new NotFoundException("User not found with phone: " + request.getPhone()));
+
+        if (user.getIsPhoneVerified()) {
+            throw new ConflictException("Phone number is already verified");
+        }
+
+        boolean isValid = otpService.validateOtp(request.getPhone(), request.getCode());
+        if (!isValid) {
+            throw new BadRequestException("Invalid or expired verification code");
+        }
+
+        user.setIsPhoneVerified(true);
+        userRepository.save(user);
+        
+        log.info("Phone verified successfully for user: {}", user.getId());
+
+        String token = jwtUtil.generateToken(user.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
+        return AuthResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken)
+                .user(UserResponse.fromEntity(user))
+                .build();
+    }
+
+    public void resendPhoneCode(String phone) {
+        log.info("Resending phone verification code for: {}", phone);
+        
+        User user = userRepository.findByPhone(phone)
+                .orElseThrow(() -> new NotFoundException("User not found with phone: " + phone));
+
+        if (user.getIsPhoneVerified()) {
+            throw new ConflictException("Phone number is already verified");
+        }
+
+        // Apply rate limits (10 per 30 mins, 3 resends -> 5 mins cooldown)
+        smsRateLimiterService.checkAndRecordRequest(phone, true);
+
+        String otp = otpService.generateAndSaveOtp(phone);
+        String message = "Your Ispilo verification code is: " + otp + ". It expires in 5 minutes.";
+        smsService.sendSms(phone, message);
     }
 
     public AuthResponse login(LoginRequest request, String deviceId) {
@@ -110,16 +163,26 @@ public class AuthService {
         }
         
         try {
-            // We need to find the user by phone first to get the email (username) for Spring Security
             User user = userRepository.findByPhone(request.getPhone())
                     .orElseThrow(() -> {
                         log.warn("Login failed: User not found with phone {}", request.getPhone());
+                        securityMonitoringService.recordFailedLogin(request.getPhone(), deviceId);
                         return new BadCredentialsException("Invalid phone number or password");
                     });
+
+            if (Boolean.TRUE.equals(user.getIsFlagged())) {
+                throw new UnauthorizedException("Your account is flagged and currently blocked. Please contact support.");
+            }
+
+            if (!user.getIsPhoneVerified()) {
+                throw new UnauthorizedException("Phone number not verified. Please verify your phone number to login.");
+            }
 
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getEmail(), request.getPassword())
             );
+
+            securityMonitoringService.resetLoginAttempts(request.getPhone());
 
             String token = jwtUtil.generateToken(user.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
@@ -134,7 +197,10 @@ public class AuthService {
 
         } catch (AuthenticationException e) {
             log.warn("Authentication failed for phone {}: {}", request.getPhone(), e.getMessage());
+            securityMonitoringService.recordFailedLogin(request.getPhone(), deviceId);
             throw new BadCredentialsException("Invalid phone number or password");
+        } catch (UnauthorizedException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error during login for phone {}: {}", request.getPhone(), e.getMessage());
             throw new RuntimeException("Login failed due to an internal error. Please try again.");

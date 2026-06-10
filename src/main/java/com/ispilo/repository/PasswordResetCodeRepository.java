@@ -12,9 +12,9 @@ import java.util.Optional;
 @Repository
 public interface PasswordResetCodeRepository extends JpaRepository<PasswordResetCode, String> {
 
-    Optional<PasswordResetCode> findTopByEmailAndUsedFalseOrderByCreatedAtDesc(String email);
+    Optional<PasswordResetCode> findTopByPhoneAndUsedFalseOrderByCreatedAtDesc(String phone);
 
     @Modifying
-    @Query("UPDATE PasswordResetCode p SET p.used = true WHERE p.email = :email AND p.used = false")
-    int markAllUnusedAsUsed(@Param("email") String email);
+    @Query("UPDATE PasswordResetCode p SET p.used = true WHERE p.phone = :phone AND p.used = false")
+    int markAllUnusedAsUsed(@Param("phone") String phone);
 }

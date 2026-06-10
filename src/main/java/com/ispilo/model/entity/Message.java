@@ -71,7 +71,7 @@ public class Message {
     @JoinColumn(name = "reply_to_message_id")
     private Message replyToMessage;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "message_reactions", joinColumns = @JoinColumn(name = "message_id"))
     @MapKeyColumn(name = "user_id")
     @Column(name = "emoji")
@@ -94,7 +94,7 @@ public class Message {
     @Builder.Default
     private Boolean isDeleted = false;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "message_deleted_for", joinColumns = @JoinColumn(name = "message_id"))
     @Column(name = "user_id")
     @Builder.Default

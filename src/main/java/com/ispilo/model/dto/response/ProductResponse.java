@@ -36,6 +36,9 @@ public class ProductResponse {
     private Integer reviewCount;
     private Boolean isAvailable;
     private Boolean isFeatured;
+    private Boolean isFlagged;
+    private String flagReason;
+    private LocalDateTime blockedUntil;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -77,6 +80,9 @@ public class ProductResponse {
                 .reviewCount(product.getReviewCount())
                 .isAvailable(product.getIsAvailable())
                 .isFeatured(product.getIsFeatured())
+                .isFlagged(product.getIsFlagged())
+                .flagReason(product.getFlagReason())
+                .blockedUntil(product.getBlockedUntil())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();

@@ -7,4 +7,6 @@ public class CreateGroupRequest {
     private String name;
     private String description;
     private boolean isPrivateGroup;
+    private String avatarUrl;
+    private String coverImageUrl;
 }

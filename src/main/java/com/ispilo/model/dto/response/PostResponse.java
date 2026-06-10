@@ -34,22 +34,22 @@ public class PostResponse {
     private PostResponse sharedFromPost;
     private GroupPostResponse sharedFromGroupPost;
 
-    public static PostResponse fromEntity(Post post) {
-        return fromEntity(post, false);
+    public static PostResponse fromEntity(Post post, String baseUrl) {
+        return fromEntity(post, false, true, baseUrl);
     }
 
-    public static PostResponse fromEntity(Post post, boolean likedByCurrentUser) {
-        return fromEntity(post, likedByCurrentUser, true);
+    public static PostResponse fromEntity(Post post, boolean likedByCurrentUser, String baseUrl) {
+        return fromEntity(post, likedByCurrentUser, true, baseUrl);
     }
 
-    public static PostResponse fromEntity(Post post, boolean likedByCurrentUser, boolean includeShared) {
+    public static PostResponse fromEntity(Post post, boolean likedByCurrentUser, boolean includeShared, String baseUrl) {
         PostResponse response = PostResponse.builder()
                 .id(post.getId())
                 .user(UserResponse.fromEntity(post.getUser()))
                 .content(post.getContent())
                 .description(post.getDescription())
                 .imageUrl(post.getImageUrl())
-                .shareUrl("https://ispilo.com/post/" + post.getId())
+                .shareUrl(baseUrl + "/post/" + post.getId())
                 .mediaUrls(post.getMediaUrls())
                 .likesCount(post.getLikesCount())
                 .commentsCount(post.getCommentsCount())
@@ -60,7 +60,7 @@ public class PostResponse {
                 .build();
 
         if (includeShared && post.getSharedFromPost() != null) {
-            response.setSharedFromPost(fromEntity(post.getSharedFromPost(), false, false));
+            response.setSharedFromPost(fromEntity(post.getSharedFromPost(), false, false, baseUrl));
         }
 
         if (includeShared && post.getSharedFromGroupPost() != null) {
@@ -74,6 +74,7 @@ public class PostResponse {
             if (gp.getAuthor() != null && !gp.isAnonymous()) {
                 gpr.setAuthorId(gp.getAuthor().getId());
                 gpr.setAuthorName(gp.getAuthor().getName());
+                gpr.setAuthorAvatar(gp.getAuthor().getAvatar());
             } else if (gp.isAnonymous()) {
                 gpr.setAuthorName("Anonymous");
             }

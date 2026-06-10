@@ -21,8 +21,12 @@ public class SellerResponse {
     private String businessLogo;
     private String businessAddress;
     private Boolean isVerified;
+    private String verificationLevel;
     private Double rating;
     private Integer totalSales;
+    private Boolean isFlagged;
+    private java.time.LocalDateTime uploadBlockedUntil;
+    private String uploadBlockReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -35,8 +39,12 @@ public class SellerResponse {
                 .businessLogo(seller.getBusinessLogo())
                 .businessAddress(seller.getBusinessAddress())
                 .isVerified(seller.getIsVerified())
+                .verificationLevel(seller.getVerificationLevel() != null ? seller.getVerificationLevel().name() : null)
                 .rating(seller.getRating())
                 .totalSales(seller.getTotalSales())
+                .isFlagged(seller.getIsFlagged())
+                .uploadBlockedUntil(seller.getUploadBlockedUntil())
+                .uploadBlockReason(seller.getUploadBlockReason())
                 .createdAt(seller.getCreatedAt())
                 .updatedAt(seller.getUpdatedAt())
                 .build();

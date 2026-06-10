@@ -29,6 +29,33 @@ public class GroupController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping
+    public ResponseEntity<org.springframework.data.domain.Page<com.ispilo.model.dto.response.GroupResponse>> getAllGroups(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(groupService.getAllGroups(org.springframework.data.domain.PageRequest.of(page, size)));
+    }
+
+    @GetMapping("/{groupId}")
+    public ResponseEntity<com.ispilo.model.dto.response.GroupDetailsResponse> getGroupDetails(
+            @PathVariable String groupId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String email = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(groupService.getGroupDetails(groupId, email));
+    }
+
+    @GetMapping("/{groupId}/members")
+    public ResponseEntity<java.util.List<com.ispilo.model.dto.response.GroupUserSummaryResponse>> getGroupMembers(
+            @PathVariable String groupId) {
+        return ResponseEntity.ok(groupService.getGroupMembers(groupId));
+    }
+
+    @GetMapping("/{groupId}/invite-link")
+    public ResponseEntity<com.ispilo.model.dto.response.GroupInviteLinkResponse> getInviteLink(
+            @PathVariable String groupId) {
+        return ResponseEntity.ok(groupService.getInviteLink(groupId));
+    }
+
     @PostMapping("/{groupId}/members/{memberId}/promote")
     public ResponseEntity<?> promote(@PathVariable String groupId,
                                      @PathVariable String memberId,

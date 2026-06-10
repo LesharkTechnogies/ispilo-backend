@@ -82,6 +82,16 @@ public class Product {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    @Column(name = "is_flagged")
+    @Builder.Default
+    private Boolean isFlagged = false;
+
+    @Column(name = "flag_reason", length = 500)
+    private String flagReason;
+
+    @Column(name = "blocked_until")
+    private LocalDateTime blockedUntil;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 

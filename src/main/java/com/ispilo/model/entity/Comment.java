@@ -43,6 +43,10 @@ public class Comment {
     @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Comment> replies;
 
+    @Column(name = "likes_count")
+    @Builder.Default
+    private Integer likesCount = 0;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

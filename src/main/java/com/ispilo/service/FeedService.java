@@ -5,6 +5,7 @@ import com.ispilo.model.entity.Post;
 import com.ispilo.repository.PostRepository;
 import com.ispilo.repository.PostLikeRepository;
 import com.ispilo.repository.PostViewRepository;
+import com.ispilo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,10 +25,13 @@ import java.util.Set;
 public class FeedService {
 
     private final PostRepository postRepository;
-    private final PostLikeRepository postLikeRepository;
+    private final UserRepository userRepository;
     private final PostViewRepository postViewRepository;
-    private final com.ispilo.repository.UserRepository userRepository;
     private final SmartFeedService smartFeedService;
+    private final PostLikeRepository postLikeRepository;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     private static final double VIEW_THRESHOLD = 0.7; // 70% of post must be viewed
 
@@ -43,9 +48,8 @@ public class FeedService {
 
         List<Post> rankedPosts = smartFeedService.getRankedFeedForUser(userId, pageable.getPageNumber(), pageable.getPageSize());
         List<PostResponse> responses = rankedPosts.stream()
-                .map(post -> PostResponse.fromEntity(post, postLikeRepository.existsByUserAndPost(user, post)))
+                .map(post -> PostResponse.fromEntity(post, postLikeRepository.existsByUserAndPost(user, post), baseUrl))
                 .toList();
-
         return new org.springframework.data.domain.PageImpl<>(responses, pageable, responses.size());
     }
 

@@ -16,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,9 +31,12 @@ public class SearchService {
     private final GroupRepository groupRepository;
     private final GroupService groupService;
 
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     public SearchResponse<PostResponse> searchPosts(String query, Pageable pageable) {
         Page<Post> posts = postRepository.searchPosts(query, pageable);
-        return SearchResponse.of(posts.map(PostResponse::fromEntity));
+        return SearchResponse.of(posts.map(post -> PostResponse.fromEntity(post, baseUrl)));
     }
 
     public SearchResponse<PersonResponse> searchPeople(String query, Pageable pageable) {

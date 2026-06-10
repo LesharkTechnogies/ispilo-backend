@@ -27,13 +27,18 @@ public class MediaService {
     private static final String UPLOAD_DIR = "uploads";
 
     public MediaUploadResponse uploadFile(MultipartFile file, String type, String userId) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename != null && originalFilename.toLowerCase().matches(".*\\.(mp4|mov|avi|mkv|webm|wmv)(\\?.*)?$")) {
+            throw new RuntimeException("Video uploads are restricted to the Video module to prevent excessive storage usage.");
+        }
+
         String fileName = generateFileName(file, userId, type);
         String fileUrl = uploadToLocal(file, fileName);
 
         return MediaUploadResponse.builder()
                 .mediaUrl(fileUrl)
                 .mediaType(type)
-                .fileName(file.getOriginalFilename())
+                .fileName(originalFilename)
                 .fileSize(file.getSize())
                 .uploadedAt(LocalDateTime.now())
                 .build();

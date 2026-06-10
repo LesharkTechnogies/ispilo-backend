@@ -87,6 +87,16 @@ public class User {
     @Builder.Default
     private Boolean isAdmin = false;
 
+    @Column(name = "is_flagged")
+    @Builder.Default
+    private Boolean isFlagged = false;
+
+    @Column(name = "flag_reason", length = 500)
+    private String flagReason;
+
+    @Column(name = "blocked_until")
+    private LocalDateTime blockedUntil;
+
     @Column(length = 500)
     private String bio;
 
@@ -94,6 +104,10 @@ public class User {
 
     @Column(name = "fcm_token")
     private String fcmToken;
+
+    @Column(name = "private_notification")
+    @Builder.Default
+    private Boolean privateNotification = true;
 
     @Column(name = "reset_password_expires_at")
     private LocalDateTime resetPasswordExpiresAt;

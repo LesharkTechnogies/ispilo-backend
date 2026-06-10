@@ -24,12 +24,15 @@ public class GroupPostMapper {
         if (callerIsAdmin) {
             r.setAuthorId(p.getAuthor() != null ? p.getAuthor().getId() : null);
             r.setAuthorName(p.getAuthor() != null ? p.getAuthor().getName() : null);
+            r.setAuthorAvatar(p.getAuthor() != null ? p.getAuthor().getAvatar() : null);
         } else if (p.isAnonymous()) {
             r.setAuthorId(null);
             r.setAuthorName("Anonymous");
+            r.setAuthorAvatar(null);
         } else {
             r.setAuthorId(p.getAuthor() != null ? p.getAuthor().getId() : null);
             r.setAuthorName(p.getAuthor() != null ? p.getAuthor().getName() : null);
+            r.setAuthorAvatar(p.getAuthor() != null ? p.getAuthor().getAvatar() : null);
         }
 
         return r;

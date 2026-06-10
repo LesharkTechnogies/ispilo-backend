@@ -20,6 +20,8 @@ public interface MessageRepository extends JpaRepository<Message, String> {
 
     Page<Message> findByConversationId(String conversationId, Pageable pageable);
 
+    Page<Message> findBySenderId(String senderId, Pageable pageable);
+
     List<Message> findByConversationIdOrderByCreatedAtAsc(String conversationId);
 
     long countByConversationIdAndIsReadFalse(String conversationId);

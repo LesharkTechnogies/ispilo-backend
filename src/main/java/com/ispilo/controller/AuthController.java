@@ -33,13 +33,35 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> register(
             @Valid @RequestBody RegisterRequest request,
             @RequestHeader("X-Device-ID") String deviceId) {
-        AuthResponse auth = authService.register(request, deviceId);
+        var response = authService.register(request, deviceId);
         Map<String, Object> body = Map.of(
                 "success", true,
-                "message", "Registration successful",
-                "data", auth
+                "message", response.getMessage(),
+                "data", response
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
+    }
+
+    @PostMapping("/verify-phone")
+    public ResponseEntity<Map<String, Object>> verifyPhone(
+            @Valid @RequestBody com.ispilo.model.dto.request.VerifyPhoneRequest request) {
+        AuthResponse auth = authService.verifyPhone(request);
+        Map<String, Object> body = Map.of(
+                "success", true,
+                "message", "Phone verified and registration completed successfully",
+                "data", auth
+        );
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/resend-phone-code")
+    public ResponseEntity<Map<String, Object>> resendPhoneCode(
+            @Valid @RequestBody com.ispilo.model.dto.request.ResendPhoneCodeRequest request) {
+        authService.resendPhoneCode(request.getPhone());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Verification code resent successfully"
+        ));
     }
 
     @PostMapping("/login")
@@ -56,7 +78,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password/request-code")
     public ResponseEntity<Map<String, Object>> requestForgotPasswordCode(@Valid @RequestBody ForgotPasswordCodeRequest request) {
-        forgotPasswordService.requestCode(request.getEmail(), false);
+        forgotPasswordService.requestCode(request.getPhone(), false);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Verification code sent"
@@ -65,7 +87,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password/resend-code")
     public ResponseEntity<Map<String, Object>> resendForgotPasswordCode(@Valid @RequestBody ForgotPasswordCodeRequest request) {
-        forgotPasswordService.requestCode(request.getEmail(), true);
+        forgotPasswordService.requestCode(request.getPhone(), true);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Verification code sent"

@@ -26,6 +26,8 @@ import com.ispilo.repository.SellerRepository;
 import com.ispilo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -53,6 +55,9 @@ public class ProductService {
     private final BannedDeviceCacheService bannedDeviceCacheService;
     private final SellerRepository sellerRepository;
     private final UserRepository userRepository;
+
+   @Value("${app.base-url}")
+    private String baseUrl;
 
     private static final List<String> FLAGGED_WORDS = List.of(
         "scum",
@@ -195,7 +200,7 @@ public class ProductService {
 
         String imageUrl = request.mainImage();
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
-            imageUrl = "https://ispilo.com/default-product-image.png";
+            imageUrl = baseUrl + "/default-product-image.png";
         }
 
         List<String> images = buildProductImages(imageUrl, request);
@@ -255,7 +260,7 @@ public class ProductService {
         if (request.mainImage() != null && !request.mainImage().trim().isEmpty()) {
             product.setMainImage(request.mainImage());
         } else if (product.getMainImage() == null || product.getMainImage().trim().isEmpty()) {
-            product.setMainImage("https://ispilo.com/default-product-image.png");
+            product.setMainImage(baseUrl + "/default-product-image.png");
         }
 
         boolean hasImageInputs = hasImageInputs(request);
@@ -263,7 +268,7 @@ public class ProductService {
             String mainImage = product.getMainImage();
             product.setImages(buildProductImages(mainImage, request));
         } else if (product.getImages() == null || product.getImages().isEmpty()) {
-            product.setImages(List.of("https://ispilo.com/default-product-image.png"));
+            product.setImages(List.of(baseUrl + "/default-product-image.png"));
         }
 
         if (request.category() != null) {
@@ -364,7 +369,7 @@ public class ProductService {
         }
 
         if (images.isEmpty()) {
-            images.add("https://ispilo.com/default-product-image.png");
+            images.add(baseUrl + "/default-product-image.png");
         }
 
         if (images.size() > 5) {

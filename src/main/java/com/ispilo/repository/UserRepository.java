@@ -36,4 +36,10 @@ public interface UserRepository extends JpaRepository<User, String> {
     // Additional endpoints for followers
     @Query("SELECT u FROM User u WHERE u.id != :userId AND u.id NOT IN (SELECT f.following.id FROM UserFollow f WHERE f.follower.id = :userId) ORDER BY u.createdAt DESC")
     Page<User> findUsersNotFollowedBy(@Param("userId") String userId, Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE u.isPhoneVerified = false AND u.createdAt < :cutoffTime")
+    List<User> findUnverifiedUsersOlderThan(@Param("cutoffTime") java.time.LocalDateTime cutoffTime);
+
+    @Query("SELECT u FROM User u WHERE u.isPhoneVerified = false AND u.createdAt BETWEEN :startTime AND :endTime AND u.fcmToken IS NOT NULL")
+    List<User> findUnverifiedUsersForReminder(@Param("startTime") java.time.LocalDateTime startTime, @Param("endTime") java.time.LocalDateTime endTime);
 }

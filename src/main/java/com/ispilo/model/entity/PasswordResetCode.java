@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "password_reset_codes", indexes = {
-        @Index(name = "idx_prc_email", columnList = "email"),
+        @Index(name = "idx_prc_phone", columnList = "phone"),
         @Index(name = "idx_prc_expires_at", columnList = "expires_at"),
         @Index(name = "idx_prc_created_at", columnList = "created_at")
 })
@@ -30,7 +30,7 @@ public class PasswordResetCode {
     private String id;
 
     @Column(nullable = false)
-    private String email;
+    private String phone;
 
     @Column(name = "code_hash", nullable = false, length = 120)
     private String codeHash;

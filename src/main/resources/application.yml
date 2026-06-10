@@ -1,76 +1,84 @@
 spring:
   application:
-    name: ispilo-backend 
-  datasource: # Corrected indentation
+    name: ispilo-backend
+
+  datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
-    driver-class-name: org.postgresql.Driver # Corrected typo: Drive -> Driver
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
-    properties: # Keep this block if you have other hibernate properties
-      hibernate: # Keep this block if you have other hibernate properties
-        format_sql: true
-    show-sql: true
+    properties:
+      hibernate:
+        format_sql: false
+    show-sql: false
+
   servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+
   cache:
     type: simple
-  error:
-    include-message: always
-    include-binding-errors: always
 
-server: # New top-level block for server properties
-  port: ${PORT:8080} # Moved here
-  tomcat:
-    threads:
-      max: 400
-      min-spare: 25
-    accept-count: 200
+server:
+  port: ${PORT}
 
 jwt:
-  
   secret: ${JWT_SECRET}
   expiration: 86400000
   refresh-expiration: 604800000
 
 app:
-  base-url: ${APP_BASE_URL:http://localhost:8080}
-  cdn-url: ${APP_BASE_URL:http://localhost:8080}/media
+  base-url: ${APP_BASE_URL}
+  cdn-url: ${APP_CDN_URL}
   page-size: 20
   max-page-size: 100
+
   encryption:
-    master-key: ${ENCRYPTION_MASTER_KEY:}
+    master-key: ${ENCRYPTION_MASTER_KEY}
 
 brevo:
-  api-key: ${BREVO_API_KEY:}
-  sender-email: ${BREVO_SENDER_EMAIL:lesharktechnologies@gmail.com}
-  sender-name: ${BREVO_SENDER_NAME:Ispilo}
+  api-key: ${BREVO_API_KEY}
+  sender-email: ${BREVO_SENDER_EMAIL}
+  sender-name: ${BREVO_SENDER_NAME}
 
 forgot-password:
-  code-ttl-minutes: ${FORGOT_PASSWORD_CODE_TTL_MINUTES:15}
-  resend-cooldown-seconds: ${FORGOT_PASSWORD_RESEND_COOLDOWN_SECONDS:60}
-  max-attempts: ${FORGOT_PASSWORD_MAX_ATTEMPTS:5}
+  code-ttl-minutes: 15
+  resend-cooldown-seconds: 60
+  max-attempts: 5
 
 cloudinary:
-  cloud_name: ${CLOUDINARY_CLOUD_NAME:dm6ijapq4}
-  api_key: ${CLOUDINARY_API_KEY:511788245616987}
-  api_secret: ${CLOUDINARY_API_SECRET:5wagQTU7MQBF3wabxy8XRmXcZaw}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+talksasa:
+  api-key: ${TALKSASA_API_KEY}
+  sender-id: ${TALKSASA_SENDER_ID}
+
+r2:
+  endpoint: ${R2_ENDPOINT}
+  access-key: ${R2_ACCESS_KEY}
+  secret-key: ${R2_SECRET_KEY}
+  bucket-name: ${R2_BUCKET_NAME}
+  public-url: ${R2_PUBLIC_URL}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
   endpoint:
     health:
       show-details: when-authorized
 
 logging:
   level:
-    com.ispilo: DEBUG
+    com.ispilo: INFO
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: WARN

@@ -76,7 +76,7 @@ public class ConversationService {
             
             if (!existing.isEmpty()) {
                 log.debug("Direct conversation already exists: {}", existing.get(0).getId());
-                return ConversationResponse.fromEntity(existing.get(0));
+                return ConversationResponse.fromEntity(existing.get(0), userId);
             }
         }
 
@@ -92,7 +92,7 @@ public class ConversationService {
         log.info("Created conversation {} with {} participants",
                 conversation.getId(), participants.size());
 
-        return ConversationResponse.fromEntity(conversation);
+        return ConversationResponse.fromEntity(conversation, userId);
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +111,7 @@ public class ConversationService {
                 .findByParticipantsId(userId, pageable);      
 
         return conversations.map(conversation -> {
-            ConversationResponse response = ConversationResponse.fromEntity(conversation);
+            ConversationResponse response = ConversationResponse.fromEntity(conversation, userId);
             long unreadCount = messageRepository.countUnreadMessagesByConversationAndUser(conversation.getId(), userId);
             response.setUnreadCount(unreadCount);
             return response;
@@ -133,7 +133,7 @@ public class ConversationService {
             throw new UnauthorizedException("User is not a participant in this conversation");
         }
 
-        ConversationResponse response = ConversationResponse.fromEntity(conversation);
+        ConversationResponse response = ConversationResponse.fromEntity(conversation, userId);
         long unreadCount = messageRepository.countUnreadMessagesByConversationAndUser(conversationId, userId);
         response.setUnreadCount(unreadCount);
         return response;
@@ -184,7 +184,7 @@ public class ConversationService {
 
         if (!existing.isEmpty()) {
             log.debug("Direct conversation exists: {}", existing.get(0).getId());
-            return ConversationResponse.fromEntity(existing.get(0));
+            return ConversationResponse.fromEntity(existing.get(0), userId);
         }
 
         // Create new conversation

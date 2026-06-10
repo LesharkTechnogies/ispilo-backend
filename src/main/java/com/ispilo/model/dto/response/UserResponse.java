@@ -33,6 +33,9 @@ public class UserResponse {
     private String location;
     private Boolean isOnline;
     private LocalDateTime lastSeenAt;
+    private Boolean isFlagged;
+    private String flagReason;
+    private LocalDateTime blockedUntil;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean isFollowing;
@@ -61,6 +64,9 @@ public class UserResponse {
                 .location(user.getLocation())
                 .isOnline(user.getIsOnline())
                 .lastSeenAt(user.getLastSeenAt())
+                .isFlagged(user.getIsFlagged())
+                .flagReason(user.getFlagReason())
+                .blockedUntil(user.getBlockedUntil())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .isFollowing(false) 

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -21,6 +22,9 @@ public class GroupService {
     private final GroupRepository groupRepo;
     private final GroupMemberRepository membershipRepo;
     private final UserRepository userRepo;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     @Transactional
     public GroupEntity createGroup(String creatorEmail, CreateGroupRequest r) {
@@ -110,5 +114,68 @@ public class GroupService {
         r.setCreatedById(g.getCreatedBy() != null ? g.getCreatedBy().getId() : null);
         r.setMemberCount(membershipRepo.countByGroup(g));
         return r;
+    }
+
+    public org.springframework.data.domain.Page<com.ispilo.model.dto.response.GroupResponse> getAllGroups(org.springframework.data.domain.Pageable pageable) {
+        return groupRepo.findAll(pageable).map(this::toGroupResponse);
+    }
+
+    public com.ispilo.model.dto.response.GroupDetailsResponse getGroupDetails(String groupId, String userEmail) {
+        GroupEntity g = groupRepo.findById(groupId).orElseThrow(() -> new com.ispilo.exception.NotFoundException("Group not found"));
+        boolean isMember = false;
+        boolean isAdmin = false;
+        if (userEmail != null) {
+            User u = userRepo.findByEmail(userEmail).orElse(null);
+            if (u != null) {
+                GroupMembershipEntity m = membershipRepo.findByGroupAndUser(g, u).orElse(null);
+                if (m != null) {
+                    isMember = true;
+                    isAdmin = m.getRole() == GroupRole.ADMIN;
+                }
+            }
+        }
+        long memberCount = membershipRepo.countByGroup(g);
+        java.util.List<GroupMembershipEntity> adminMembers = membershipRepo.findByGroupAndRole(g, GroupRole.ADMIN);
+        java.util.List<com.ispilo.model.dto.response.GroupUserSummaryResponse> admins = adminMembers.stream()
+            .map(m -> new com.ispilo.model.dto.response.GroupUserSummaryResponse(m.getUser().getId(), m.getUser().getName(), m.getUser().getAvatar()))
+            .collect(java.util.stream.Collectors.toList());
+        com.ispilo.model.dto.response.GroupUserSummaryResponse creator = null;
+        if (g.getCreatedBy() != null) {
+            creator = new com.ispilo.model.dto.response.GroupUserSummaryResponse(g.getCreatedBy().getId(), g.getCreatedBy().getName(), g.getCreatedBy().getAvatar());
+        }
+        
+        String inviteLink = "ispilo://group/" + g.getId() + "/join";
+
+        return com.ispilo.model.dto.response.GroupDetailsResponse.builder()
+                .id(g.getId())
+                .name(g.getName())
+                .description(g.getDescription())
+                .isPrivate(g.isPrivate())
+                .createdAt(g.getCreatedAt())
+                .createdBy(creator)
+                .memberCount(memberCount)
+                .adminCount(admins.size())
+                .isMember(isMember)
+                .isAdmin(isAdmin)
+                .admins(admins)
+                .inviteLink(inviteLink)
+                .build();
+    }
+
+    public java.util.List<com.ispilo.model.dto.response.GroupUserSummaryResponse> getGroupMembers(String groupId) {
+        GroupEntity g = groupRepo.findById(groupId).orElseThrow(() -> new com.ispilo.exception.NotFoundException("Group not found"));
+        return membershipRepo.findByGroup(g).stream()
+                .map(m -> new com.ispilo.model.dto.response.GroupUserSummaryResponse(m.getUser().getId(), m.getUser().getName(), m.getUser().getAvatar()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    public com.ispilo.model.dto.response.GroupInviteLinkResponse getInviteLink(String groupId) {
+        GroupEntity g = groupRepo.findById(groupId).orElseThrow(() -> new com.ispilo.exception.NotFoundException("Group not found"));
+        return com.ispilo.model.dto.response.GroupInviteLinkResponse.builder()
+                .groupId(g.getId())
+                .groupName(g.getName())
+                .deepLink("ispilo://group/" + g.getId() + "/join")
+                .webLink(baseUrl + "/groups/" + g.getId() + "/join")
+                .build();
     }
 }

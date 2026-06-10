@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,10 @@ public class PostService {
     private final PostInteractionService postInteractionService;
     private final PostPublishingService postPublishingService;
     private final GroupPostRepository groupPostRepository;
+    private final com.ispilo.repository.CommentLikeRepository commentLikeRepository;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     private User resolveUser(String usernameOrPhoneOrEmail) {
         return userRepository.findByEmail(usernameOrPhoneOrEmail)
@@ -50,9 +55,23 @@ public class PostService {
                         .orElseThrow(() -> new NotFoundException("User not found")));
     }
 
+    private void validateMediaForStandardPost(String imageUrl, List<String> mediaUrls) {
+        java.util.List<String> allUrls = new java.util.ArrayList<>();
+        if (imageUrl != null) allUrls.add(imageUrl.toLowerCase());
+        if (mediaUrls != null) {
+            mediaUrls.forEach(url -> allUrls.add(url.toLowerCase()));
+        }
+        
+        for (String url : allUrls) {
+            if (url.matches(".*\\.(mp4|mov|avi|mkv|webm|wmv)(\\?.*)?$")) {
+                throw new com.ispilo.exception.BadRequestException("Standard posts only support pictures. Please use the Video module for videos.");
+            }
+        }
+    }
+
     private PostResponse toPostResponse(Post post, User viewer) {
-        boolean likedByCurrentUser = viewer != null && postLikeRepository.existsByUserAndPost(viewer, post);
-        return PostResponse.fromEntity(post, likedByCurrentUser);
+        boolean likedByCurrentUser = viewer != null && postInteractionService.isPostLikedByUser(post.getId(), viewer.getId());
+        return PostResponse.fromEntity(post, likedByCurrentUser , baseUrl);
     }
 
     public Page<PostResponse> getFeed(String username, Pageable pageable) {
@@ -91,6 +110,8 @@ public class PostService {
     public PostResponse createPost(String username, CreatePostRequest request) {
     User user = resolveUser(username);
 
+        validateMediaForStandardPost(request.getImageUrl(), request.getMediaUrls());
+
         String postContent = request.getActualContent();
 
         Post post = Post.builder()
@@ -118,7 +139,7 @@ public class PostService {
     public PostResponse getPost(String postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
-        return PostResponse.fromEntity(post);
+        return PostResponse.fromEntity(post, baseUrl);
     }
 
     @Transactional
@@ -131,6 +152,8 @@ public class PostService {
         if (!post.getUser().getId().equals(authUser.getId())) {
             throw new UnauthorizedException("You are not authorized to update this post");
         }
+
+        validateMediaForStandardPost(request.getImageUrl(), request.getMediaUrls());
 
         String updatedContent = request.getActualContent();
         if (updatedContent != null && !updatedContent.isEmpty()) {
@@ -252,12 +275,50 @@ public class PostService {
         return CommentResponse.fromEntity(comment);
     }
 
-    public Page<CommentResponse> getPostComments(String postId, Pageable pageable) {
+    @Transactional
+    public void toggleCommentLike(String username, String commentId) {
+        User user = resolveUser(username);
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found"));
+
+        java.util.Optional<com.ispilo.model.entity.CommentLike> existingLike = commentLikeRepository.findByUserIdAndCommentId(user.getId(), comment.getId());
+
+        if (existingLike.isPresent()) {
+            commentLikeRepository.delete(existingLike.get());
+            comment.setLikesCount(Math.max(0, comment.getLikesCount() - 1));
+        } else {
+            com.ispilo.model.entity.CommentLike like = com.ispilo.model.entity.CommentLike.builder()
+                    .user(user)
+                    .comment(comment)
+                    .build();
+            commentLikeRepository.save(like);
+            comment.setLikesCount((comment.getLikesCount() != null ? comment.getLikesCount() : 0) + 1);
+        }
+
+        commentRepository.save(comment);
+    }
+
+    public Page<CommentResponse> getPostComments(String username, String postId, Pageable pageable) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException("Post not found"));
+        User user = username != null ? resolveUser(username) : null;
+        String currentUserId = user != null ? user.getId() : null;
 
         // Only fetch top-level comments; replies will be loaded eagerly/lazily via DTO mapper.
         Page<Comment> comments = commentRepository.findByPostIdAndParentCommentIsNullOrderByCreatedAtDesc(postId, pageable);
-        return comments.map(CommentResponse::fromEntity);
+        
+        return comments.map(comment -> {
+            CommentResponse response = CommentResponse.fromEntity(comment, currentUserId);
+            if (currentUserId != null) {
+                response.setIsLiked(commentLikeRepository.existsByUserIdAndCommentId(currentUserId, comment.getId()));
+                // Resolve replies manually to avoid N+1 query issue or just rely on lazy loading
+                if (response.getReplies() != null) {
+                    for (CommentResponse reply : response.getReplies()) {
+                        reply.setIsLiked(commentLikeRepository.existsByUserIdAndCommentId(currentUserId, reply.getId()));
+                    }
+                }
+            }
+            return response;
+        });
     }
 }

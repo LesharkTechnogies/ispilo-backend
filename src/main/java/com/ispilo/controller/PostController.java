@@ -38,11 +38,21 @@ public class PostController {
 
     @GetMapping("/{postId}/comments")
     public ResponseEntity<Page<com.ispilo.model.dto.response.CommentResponse>> getPostComments(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String postId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(postService.getPostComments(postId, pageable));
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(postService.getPostComments(username, postId, pageable));
+    }
+
+    @PostMapping("/comments/{commentId}/like")
+    public ResponseEntity<Void> toggleCommentLike(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String commentId) {
+        postService.toggleCommentLike(userDetails.getUsername(), commentId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping

@@ -41,6 +41,20 @@ public class GroupPostService {
     private final GroupPostMapper groupPostMapper;
     private final NotificationService notificationService;
 
+    private void validateMedia(String imageUrl, java.util.Set<String> mediaUrls) {
+        java.util.List<String> allUrls = new java.util.ArrayList<>();
+        if (imageUrl != null) allUrls.add(imageUrl.toLowerCase());
+        if (mediaUrls != null) {
+            mediaUrls.forEach(url -> allUrls.add(url.toLowerCase()));
+        }
+        
+        for (String url : allUrls) {
+            if (url.matches(".*\\.(mp4|mov|avi|mkv|webm|wmv)(\\?.*)?$")) {
+                throw new com.ispilo.exception.BadRequestException("Group posts only support pictures. Please use the Video module for videos.");
+            }
+        }
+    }
+
     @Transactional
     public GroupPostResponse createGroupPost(String username, String groupId, CreatePostRequest request) {
         User user = findUserByUsername(username);
@@ -50,6 +64,8 @@ public class GroupPostService {
         // Ensure user is a member of the group
         GroupMembershipEntity membership = groupMemberRepository.findByGroupAndUser(group, user)
                 .orElseThrow(() -> new UnauthorizedException("You are not a member of this group."));
+
+        validateMedia(request.getImageUrl(), request.getMediaUrls() != null ? new HashSet<>(request.getMediaUrls()) : null);
 
         String postContent = request.getActualContent();
         GroupPost post = GroupPost.builder()
