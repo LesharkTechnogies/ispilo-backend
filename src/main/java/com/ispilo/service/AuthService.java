@@ -85,7 +85,7 @@ public class AuthService {
 
             // Generate OTP and send async
             String otp = otpService.generateAndSaveOtp(request.getPhone());
-            String message = "Your Ispilo verification code is: " + otp + ". It expires in 5 minutes.";
+            String message = "Your Ispilo verification code is: " + otp + " ispilo. It expires in 5 minutes.";
             smsService.sendSms(request.getPhone(), message);
 
             return RegistrationInitiatedResponse.builder()
@@ -148,7 +148,7 @@ public class AuthService {
         smsRateLimiterService.checkAndRecordRequest(phone, true);
 
         String otp = otpService.generateAndSaveOtp(phone);
-        String message = "Your Ispilo verification code is: " + otp + ". It expires in 5 minutes.";
+        String message = "Your Ispilo verification code is: " + otp + " ispilo. It expires in 5 minutes.";
         smsService.sendSms(phone, message);
     }
 

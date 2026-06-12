@@ -64,7 +64,7 @@ public class ForgotPasswordService {
         passwordResetCodeRepository.save(resetCode);
 
         // Send SMS
-        String message = "Your ISPilo verification code is: " + rawCode + ". It expires in " + codeTtlMinutes + " minutes.";
+        String message = "Your ISPilo verification code is: " + rawCode + " ispilo. It expires in " + codeTtlMinutes + " minutes.";
         smsService.sendSms(phone, message);
         log.info("Password reset code sent to {}", phone);
     }
