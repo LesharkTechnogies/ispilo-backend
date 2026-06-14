@@ -13,9 +13,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "posts", indexes = {
-    @Index(name = "idx_user_id", columnList = "user_id"),
-    @Index(name = "idx_created_at", columnList = "created_at"),
-    @Index(name = "idx_is_sponsored", columnList = "is_sponsored")
+    @Index(name = "idx_post_user_id", columnList = "user_id"),
+    @Index(name = "idx_post_created_at", columnList = "created_at"),
+    @Index(name = "idx_post_is_sponsored", columnList = "is_sponsored")
 })
 @Data
 @NoArgsConstructor

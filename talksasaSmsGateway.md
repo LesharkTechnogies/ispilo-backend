@@ -2,7 +2,7 @@ SMS API
 BULK SMS's Programmable SMS API enables you to programmatically send SMS messages from your web application. First, you need to create a new message object. BULK SMS returns the created message object with each request.
 API Endpoint
 
-Markup
+Markup  PHP
 https://bulksms.talksasa.com/api/v3/sms/send
 Parameters
 Parameter	Required	Description

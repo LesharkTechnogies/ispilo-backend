@@ -29,7 +29,7 @@ public class SmsService {
     @Value("${talksasa.sender-id}")
     private String senderId;
 
-    private static final String TALKSASA_URL = "https://bulksms.talksasa.com/api/v3/sms/send-hashed";
+    private static final String TALKSASA_URL = "https://bulksms.talksasa.com/api/v3/sms/send";
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Async
@@ -52,7 +52,7 @@ public class SmsService {
 
             Map<String, String> body = new HashMap<>();
             body.put("recipient", formattedRecipient);
-            body.put("recipient_format", "plain");
+            body.put("type", "plain");
             body.put("sender_id", senderId);
             body.put("message", message);
 

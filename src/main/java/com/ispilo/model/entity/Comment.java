@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "comments", indexes = {
-    @Index(name = "idx_post_id", columnList = "post_id"),
-    @Index(name = "idx_user_id", columnList = "user_id")
+    @Index(name = "idx_comment_post_id", columnList = "post_id"),
+    @Index(name = "idx_comment_user_id", columnList = "user_id")
 })
 @Data
 @NoArgsConstructor

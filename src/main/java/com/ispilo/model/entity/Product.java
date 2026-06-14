@@ -14,10 +14,10 @@ import java.util.List;
 
 @Entity
 @Table(name = "products", indexes = {
-    @Index(name = "idx_seller_id", columnList = "seller_id"),
-    @Index(name = "idx_category", columnList = "category"),
-    @Index(name = "idx_created_at", columnList = "created_at"),
-    @Index(name = "idx_rating", columnList = "rating")
+    @Index(name = "idx_product_seller_id", columnList = "seller_id"),
+    @Index(name = "idx_product_category", columnList = "category"),
+    @Index(name = "idx_product_created_at", columnList = "created_at"),
+    @Index(name = "idx_product_rating", columnList = "rating")
 })
 @Data
 @NoArgsConstructor

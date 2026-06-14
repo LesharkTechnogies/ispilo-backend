@@ -13,9 +13,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "users", indexes = {
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_phone", columnList = "phone"),
-    @Index(name = "idx_created_at", columnList = "created_at")
+    @Index(name = "idx_user_email", columnList = "email"),
+    @Index(name = "idx_user_phone", columnList = "phone"),
+    @Index(name = "idx_user_created_at", columnList = "created_at")
 })
 @Data
 @EqualsAndHashCode(exclude = {"posts", "comments"})

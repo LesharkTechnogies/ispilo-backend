@@ -13,8 +13,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "sellers", indexes = {
-    @Index(name = "idx_user_id", columnList = "user_id"),
-    @Index(name = "idx_business_name", columnList = "business_name")
+    @Index(name = "idx_seller_user_id", columnList = "user_id"),
+    @Index(name = "idx_seller_business_name", columnList = "business_name")
 })
 @Data
 @NoArgsConstructor

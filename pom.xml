@@ -62,11 +62,20 @@
         </dependency>
 
         <!-- Database -->
-        <!-- Removed MySQL dependency to avoid conflicts -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <!-- Removed scope runtime to ensure it's available for class loading if needed -->
+        </dependency>
+        
+        <!-- Flyway Database Migrations -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>10.8.1</version>
         </dependency>
 
         <!-- JWT -->
